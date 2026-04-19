@@ -1,10 +1,14 @@
 import "server-only";
 
+import type { Aesthetic, Industry } from "@/types/profile";
+
 import { getAdminDb } from "./admin";
 
 export interface PublicProfile {
   uid: string;
   handle: string;
+  industry: Industry;
+  aesthetic: Aesthetic;
   header: {
     name: string;
     headline: string;
@@ -33,6 +37,8 @@ export async function getPublicProfileByHandle(handle: string): Promise<PublicPr
   return {
     uid,
     handle,
+    industry: (data.industry as Industry | undefined) ?? "other",
+    aesthetic: (data.aesthetic as Aesthetic | undefined) ?? "minimal",
     header: {
       name: (data.header?.name as string) ?? handle,
       headline: (data.header?.headline as string) ?? "",
