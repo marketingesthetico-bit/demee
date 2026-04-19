@@ -45,6 +45,9 @@ jobs:
       - name: Type-check
         run: pnpm type-check
 
+      - name: Test
+        run: pnpm test
+
       - name: Build
         env:
           # Build-time Firebase client config stubs (not hit at runtime in CI)
