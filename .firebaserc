@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "demee-dev",
+    "dev": "demee-dev",
+    "prod": "demee-prod"
+  }
+}

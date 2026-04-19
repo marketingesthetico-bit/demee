@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User root document: email, plan, stripeCustomerId. Only the owner reads or writes.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      // Public-facing profile subdocument. Anyone reads (needed for demee.app/[handle]),
+      // only the owner writes.
+      match /profile/{doc=**} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Handle → uid index. Public read so /[handle] can resolve. Writes are
+    // blocked on the client; the /api/users route mints handles atomically
+    // via the Admin SDK (which bypasses these rules).
+    match /handles/{handle} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Deny-by-default for everything else until rules are defined.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
