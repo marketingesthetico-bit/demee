@@ -55,6 +55,7 @@ function toPublicPreview(
     uid: "preview",
     handle,
     hasBudget,
+    hasBooking: false,
     industry: profile.industry,
     aesthetic: profile.aesthetic,
     defaultSections: profile.defaultSections,

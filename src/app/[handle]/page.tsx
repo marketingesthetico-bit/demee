@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PublicPageBody } from "@/components/public/PublicPageBody";
+import { StickyContactBar } from "@/components/public/StickyContactBar";
 import { ThemeProvider } from "@/components/public/ThemeProvider";
 import { validateHandleFormat } from "@/lib/constants/reserved-handles";
 import { getPublicProfileByHandle } from "@/lib/firebase/public-profile";
@@ -51,9 +52,10 @@ export default async function PublicHandlePage({ params }: Params) {
       aesthetic={profile.aesthetic}
       className="min-h-screen bg-aesthetic-bg font-aesthetic-body text-aesthetic-fg"
     >
-      <main className="container max-w-3xl py-16 sm:py-24">
+      <main className="container max-w-3xl py-16 pb-32 sm:py-24 sm:pb-40">
         <PublicPageBody profile={profile} />
       </main>
+      <StickyContactBar profile={profile} />
     </ThemeProvider>
   );
 }

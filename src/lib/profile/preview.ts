@@ -45,6 +45,7 @@ export function buildPreviewProfile(params: BuildPreviewParams): PublicProfile |
     uid: "preview",
     handle: params.handle || "tunombre",
     hasBudget: false,
+    hasBooking: false,
     industry: draft.industry as SupportedIndustry,
     aesthetic: draft.aesthetic as SupportedAesthetic,
     defaultSections: industryConfig.defaultSections,

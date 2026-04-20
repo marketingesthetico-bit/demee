@@ -41,23 +41,24 @@ export async function getPublicProfileByHandle(handle: string): Promise<PublicPr
   const rawGallery = (data.gallery as unknown[] | undefined) ?? [];
   const rawSocial = (data.contact?.social as Record<string, unknown> | undefined) ?? {};
 
-  const budgetSnap = await db
-    .collection("users")
-    .doc(uid)
-    .collection("budget")
-    .doc("main")
-    .get();
+  const [budgetSnap, bookingSnap] = await Promise.all([
+    db.collection("users").doc(uid).collection("budget").doc("main").get(),
+    db.collection("users").doc(uid).collection("booking").doc("main").get(),
+  ]);
   const budgetData = budgetSnap.exists ? budgetSnap.data() : undefined;
   const hasBudget = Boolean(
     budgetData?.enabled === true &&
       Array.isArray(budgetData?.items) &&
       (budgetData.items as unknown[]).length > 0,
   );
+  const bookingData = bookingSnap.exists ? bookingSnap.data() : undefined;
+  const hasBooking = Boolean(bookingData?.enabled === true);
 
   return {
     uid,
     handle,
     hasBudget,
+    hasBooking,
     industry: (data.industry as Industry | undefined) ?? "other",
     aesthetic: (data.aesthetic as Aesthetic | undefined) ?? "minimal",
     defaultSections:

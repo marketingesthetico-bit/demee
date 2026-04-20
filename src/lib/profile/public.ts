@@ -48,6 +48,7 @@ export interface PublicProfile {
   gallery: PublicGalleryImage[];
   contact: { email: string | null; social: PublicSocial };
   hasBudget: boolean;
+  hasBooking: boolean;
 }
 
 export const EMPTY_PUBLIC_SOCIAL: PublicSocial = {
