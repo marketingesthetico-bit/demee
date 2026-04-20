@@ -1,30 +1,41 @@
 import { redirect } from "next/navigation";
 
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { getAdminDb } from "@/lib/firebase/admin";
 import { getServerSession } from "@/lib/firebase/session";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession();
-  if (!session) {
-    redirect("/sign-in");
+  if (!session) redirect("/sign-in");
+
+  const userSnap = await getAdminDb().collection("users").doc(session.uid).get();
+  const handle = userSnap.exists ? (userSnap.data()?.handle as string | undefined) ?? null : null;
+
+  // Users still in onboarding (no handle yet) get a minimal shell —
+  // the onboarding layout owns its own stepper.
+  if (!handle) {
+    return <div className="min-h-screen bg-paper">{children}</div>;
   }
 
   return (
-    <div className="min-h-screen bg-paper">
-      <header className="border-b border-ink/10 bg-white/60 backdrop-blur">
-        <div className="container flex h-14 items-center justify-between">
+    <div className="flex min-h-screen bg-paper">
+      <Sidebar handle={handle} />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 items-center justify-between border-b border-ink/10 bg-white/60 px-4 lg:hidden">
           <a href="/dashboard" className="font-display text-lg text-ink">
             demee<span className="text-mustard">.</span>
           </a>
           <a
-            href="/api/auth/logout"
-            className="text-sm text-ink/60 hover:text-ink"
-            aria-label="Cerrar sesión"
+            href={`/${handle}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-olive-700"
           >
-            Salir
+            Ver mi página ↗
           </a>
-        </div>
-      </header>
-      <main>{children}</main>
+        </header>
+        <main className="flex-1 overflow-x-hidden">{children}</main>
+      </div>
     </div>
   );
 }

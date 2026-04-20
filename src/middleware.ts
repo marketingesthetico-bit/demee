@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { SESSION_COOKIE_NAME } from "@/lib/firebase/session-constants";
 
-const PROTECTED_PREFIXES = ["/onboarding", "/dashboard"];
+const PROTECTED_PREFIXES = ["/onboarding", "/dashboard", "/edit"];
 const AUTH_PAGES = new Set(["/sign-in", "/sign-up"]);
 
 export function middleware(req: NextRequest) {
@@ -29,5 +29,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/onboarding/:path*", "/dashboard/:path*", "/sign-in", "/sign-up"],
+  matcher: ["/onboarding/:path*", "/dashboard/:path*", "/edit/:path*", "/sign-in", "/sign-up"],
 };
