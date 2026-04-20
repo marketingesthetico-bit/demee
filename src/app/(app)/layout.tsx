@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { MobileNav } from "@/components/dashboard/MobileNav";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getServerSession } from "@/lib/firebase/session";
@@ -21,10 +22,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen bg-paper">
       <Sidebar handle={handle} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b border-ink/10 bg-white/60 px-4 lg:hidden">
-          <a href="/dashboard" className="font-display text-lg text-ink">
-            demee<span className="text-mustard">.</span>
-          </a>
+        <header className="flex h-14 items-center justify-between border-b border-ink/10 bg-white/60 px-3 lg:hidden">
+          <div className="flex items-center gap-3">
+            <MobileNav handle={handle} />
+            <a href="/dashboard" className="font-display text-lg text-ink">
+              demee<span className="text-mustard">.</span>
+            </a>
+          </div>
           <a
             href={`/${handle}`}
             target="_blank"

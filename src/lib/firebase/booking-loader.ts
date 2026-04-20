@@ -147,15 +147,15 @@ export interface LoadedBooking {
 
 /**
  * Owner's full booking history, most recent first. Capped at 200 for MVP.
+ * Queries by single-field ownerUid equality (auto-indexed) and sorts in
+ * memory so no composite index is required.
  */
 export async function loadBookingsForOwner(ownerUid: string): Promise<LoadedBooking[]> {
   const snap = await getAdminDb()
     .collection("bookings")
     .where("ownerUid", "==", ownerUid)
-    .orderBy("startsAt", "desc")
-    .limit(200)
     .get();
-  return snap.docs.map((doc) => {
+  const items: LoadedBooking[] = snap.docs.map((doc) => {
     const data = doc.data();
     const created = data.createdAt as { toDate?: () => Date } | undefined;
     return {
@@ -169,8 +169,8 @@ export async function loadBookingsForOwner(ownerUid: string): Promise<LoadedBook
         phone: (data.guest?.phone as string | null) ?? null,
         notes: (data.guest?.notes as string | null) ?? null,
       },
-      startsAt: data.startsAt as string,
-      endsAt: data.endsAt as string,
+      startsAt: (data.startsAt as string) ?? "",
+      endsAt: (data.endsAt as string) ?? "",
       durationMinutes: (data.durationMinutes as number) ?? 30,
       locationType: (data.locationType as LocationType) ?? "online",
       location: (data.location as string) ?? "",
@@ -178,4 +178,6 @@ export async function loadBookingsForOwner(ownerUid: string): Promise<LoadedBook
       createdAt: created?.toDate?.().toISOString() ?? null,
     };
   });
+  items.sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+  return items.slice(0, 200);
 }

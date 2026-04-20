@@ -22,15 +22,17 @@ export interface LoadedLead {
   createdAt: Date | null;
 }
 
+/**
+ * Owner's leads, most recent first. Single-field ownerUid query so the
+ * composite index isn't required (sort + cap happen in memory).
+ */
 export async function loadLeadsForOwner(ownerUid: string): Promise<LoadedLead[]> {
   const snap = await getAdminDb()
     .collection("leads")
     .where("ownerUid", "==", ownerUid)
-    .orderBy("createdAt", "desc")
-    .limit(100)
     .get();
 
-  return snap.docs.map((doc) => {
+  const items: LoadedLead[] = snap.docs.map((doc) => {
     const data = doc.data();
     const created = data.createdAt as { toDate?: () => Date } | undefined;
     return {
@@ -49,4 +51,10 @@ export async function loadLeadsForOwner(ownerUid: string): Promise<LoadedLead[]>
       createdAt: created?.toDate?.() ?? null,
     } satisfies LoadedLead;
   });
+  items.sort((a, b) => {
+    const aT = a.createdAt?.getTime() ?? 0;
+    const bT = b.createdAt?.getTime() ?? 0;
+    return bT - aT;
+  });
+  return items.slice(0, 100);
 }
