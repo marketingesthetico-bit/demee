@@ -294,7 +294,21 @@ export function EditorShell({
   );
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-[1400px] flex-col lg:flex-row">
+    <div
+      className={cn(
+        // Mobile: plain vertical stack (one column grid).
+        "relative mx-auto grid min-h-[calc(100vh-3.5rem)] max-w-[1400px] grid-cols-1",
+        // Desktop: two columns whose widths animate. When `previewHidden`,
+        // the preview column collapses to 0fr and the edit column grows
+        // to 1fr — same net motion as pulling a drawer shut from the
+        // right. The two states must share the same number of tracks
+        // (2) so the browser can interpolate them smoothly.
+        "lg:transition-[grid-template-columns] lg:duration-300 lg:ease-out",
+        previewHidden
+          ? "lg:grid-cols-[1fr_0fr]"
+          : "lg:grid-cols-[480px_1fr]",
+      )}
+    >
       <div
         className="sticky top-0 z-20 flex items-center gap-2 border-b border-ink/10 bg-white/80 p-2 backdrop-blur lg:hidden"
         role="tablist"
@@ -316,21 +330,14 @@ export function EditorShell({
       <section
         className={cn(
           "w-full space-y-4 p-6 lg:overflow-y-auto",
-          // Split layout (default): edit column is 480px wide.
-          !previewHidden && "lg:w-[480px] lg:shrink-0",
-          // Preview hidden: edit column fills the whole viewport, but
-          // capped + centered so very wide monitors don't make forms 1500px wide.
+          // Preview hidden: cap + center the form so it doesn't stretch
+          // obscenely wide on large monitors (the grid column went to 1fr).
           previewHidden && "lg:mx-auto lg:w-full lg:max-w-3xl",
           // Mobile: hide the edit column when the preview tab is active.
           mobileTab === "preview" ? "hidden lg:block" : "",
         )}
       >
-        <EditorHeader
-          status={status}
-          handle={handle}
-          previewHidden={previewHidden}
-          onTogglePreview={() => setPreviewHidden((v) => !v)}
-        />
+        <EditorHeader status={status} handle={handle} />
 
         <SectionCard
           title="Presentación"
@@ -428,28 +435,65 @@ export function EditorShell({
         </SectionCard>
       </section>
 
+      {/*
+        Tab-handle toggle for the preview — desktop only. Absolutely
+        positioned at the boundary between edit/preview columns. When
+        the preview is visible, its left edge sits at the 480px boundary
+        and it hangs over into the preview column; when the preview is
+        hidden, its right edge sits at the container's right edge
+        (via translate(-100%)). Both `left` and `transform` transition
+        together so the handle slides in sync with the grid columns.
+      */}
+      <button
+        type="button"
+        onClick={() => setPreviewHidden((v) => !v)}
+        aria-pressed={!previewHidden}
+        aria-label={previewHidden ? "Mostrar vista previa" : "Ocultar vista previa"}
+        title={
+          previewHidden
+            ? "Mostrar la vista previa en vivo"
+            : "Ocultar la vista previa para tener más espacio"
+        }
+        className="absolute top-1/2 z-30 hidden h-20 w-7 items-center justify-center rounded-l-md border border-r-0 border-ink/15 bg-white text-ink/60 shadow-[-2px_0_8px_rgba(0,0,0,0.06)] transition-[left,transform,color,background-color,border-color] duration-300 ease-out hover:border-ink/30 hover:bg-ink/5 hover:text-ink lg:flex"
+        style={{
+          left: previewHidden ? "100%" : "480px",
+          transform: previewHidden
+            ? "translate(-100%, -50%)"
+            : "translate(0, -50%)",
+        }}
+      >
+        <span aria-hidden="true" className="text-sm leading-none">
+          {previewHidden ? "◀" : "▶"}
+        </span>
+      </button>
+
       <section
         className={cn(
-          "flex-1 border-t border-ink/10 lg:border-l lg:border-t-0",
+          "border-t border-ink/10 lg:border-l lg:border-t-0",
+          // Desktop: clip overflow so the inner content doesn't reflow
+          // as the grid column shrinks from 1fr → 0fr during the
+          // toggle animation. The inner wrapper holds its natural
+          // width while the container narrows around it.
+          "lg:overflow-hidden",
           // Mobile: hide when the edit tab is selected.
           mobileTab === "edit" ? "hidden lg:block" : "",
-          // Desktop: fully hidden when the user toggled the preview off.
-          previewHidden && "lg:hidden",
         )}
       >
-        <div className="sticky top-0 z-10 flex h-12 items-center justify-between border-b border-ink/10 bg-white/80 px-5 text-xs text-ink/60 backdrop-blur">
-          <span className="font-mono">demee.app/{handle}</span>
-          <span>Vista previa en vivo</span>
-        </div>
-        <ThemeProvider
-          aesthetic={profile.aesthetic}
-          overrides={profile.themeColors}
-          className="bg-aesthetic-bg font-aesthetic-body text-aesthetic-fg"
-        >
-          <div className="mx-auto max-w-2xl px-6 py-10 text-sm sm:px-8">
-            <PublicPageBody profile={preview} />
+        <div className="lg:min-w-[420px]">
+          <div className="sticky top-0 z-10 flex h-12 items-center justify-between border-b border-ink/10 bg-white/80 px-5 text-xs text-ink/60 backdrop-blur">
+            <span className="font-mono">demee.app/{handle}</span>
+            <span>Vista previa en vivo</span>
           </div>
-        </ThemeProvider>
+          <ThemeProvider
+            aesthetic={profile.aesthetic}
+            overrides={profile.themeColors}
+            className="bg-aesthetic-bg font-aesthetic-body text-aesthetic-fg"
+          >
+            <div className="mx-auto max-w-2xl px-6 py-10 text-sm sm:px-8">
+              <PublicPageBody profile={preview} />
+            </div>
+          </ThemeProvider>
+        </div>
       </section>
     </div>
   );
@@ -483,13 +527,9 @@ function MobileTab({
 function EditorHeader({
   status,
   handle,
-  previewHidden,
-  onTogglePreview,
 }: {
   status: SaveStatus;
   handle: string;
-  previewHidden: boolean;
-  onTogglePreview: () => void;
 }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-2 pb-2">
@@ -507,25 +547,7 @@ function EditorHeader({
           </a>
         </p>
       </div>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onTogglePreview}
-          aria-pressed={!previewHidden}
-          title={
-            previewHidden
-              ? "Mostrar la vista previa en vivo"
-              : "Ocultar la vista previa para tener más espacio"
-          }
-          className={cn(
-            "hidden items-center gap-1.5 rounded-md border border-ink/15 bg-white px-2.5 py-1.5 text-xs text-ink/70 transition hover:border-ink/30 hover:text-ink lg:inline-flex",
-          )}
-        >
-          <span aria-hidden="true">{previewHidden ? "👁" : "⤢"}</span>
-          {previewHidden ? "Mostrar preview" : "Ocultar preview"}
-        </button>
-        <StatusPill status={status} />
-      </div>
+      <StatusPill status={status} />
     </header>
   );
 }
