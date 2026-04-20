@@ -79,6 +79,7 @@ type ProfilePatch = Partial<{
 export function EditorShell({ initialProfile, handle }: Props) {
   const [profile, setProfile] = useState<EditableProfile>(initialProfile);
   const [status, setStatus] = useState<SaveStatus>({ kind: "clean" });
+  const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
   const pendingPatch = useRef<ProfilePatch>({});
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -173,7 +174,30 @@ export function EditorShell({ initialProfile, handle }: Props) {
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-[1400px] flex-col lg:flex-row">
-      <section className="w-full space-y-4 p-6 lg:w-[480px] lg:shrink-0 lg:overflow-y-auto">
+      <div
+        className="sticky top-0 z-20 flex items-center gap-2 border-b border-ink/10 bg-white/80 p-2 backdrop-blur lg:hidden"
+        role="tablist"
+      >
+        <MobileTab
+          active={mobileTab === "edit"}
+          onClick={() => setMobileTab("edit")}
+        >
+          Editar
+        </MobileTab>
+        <MobileTab
+          active={mobileTab === "preview"}
+          onClick={() => setMobileTab("preview")}
+        >
+          Vista previa
+        </MobileTab>
+      </div>
+
+      <section
+        className={cn(
+          "w-full space-y-4 p-6 lg:w-[480px] lg:shrink-0 lg:overflow-y-auto",
+          mobileTab === "preview" ? "hidden lg:block" : "",
+        )}
+      >
         <EditorHeader status={status} handle={handle} />
 
         <SectionCard
@@ -227,7 +251,12 @@ export function EditorShell({ initialProfile, handle }: Props) {
         </SectionCard>
       </section>
 
-      <section className="flex-1 border-t border-ink/10 lg:border-l lg:border-t-0">
+      <section
+        className={cn(
+          "flex-1 border-t border-ink/10 lg:border-l lg:border-t-0",
+          mobileTab === "edit" ? "hidden lg:block" : "",
+        )}
+      >
         <div className="sticky top-0 z-10 flex h-12 items-center justify-between border-b border-ink/10 bg-white/80 px-5 text-xs text-ink/60 backdrop-blur">
           <span className="font-mono">demee.app/{handle}</span>
           <span>Vista previa en vivo</span>
@@ -242,6 +271,31 @@ export function EditorShell({ initialProfile, handle }: Props) {
         </ThemeProvider>
       </section>
     </div>
+  );
+}
+
+function MobileTab({
+  children,
+  active,
+  onClick,
+}: {
+  children: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        "flex-1 rounded-md px-3 py-2 text-sm font-medium transition",
+        active ? "bg-ink text-paper" : "text-ink/60 hover:bg-ink/5",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
