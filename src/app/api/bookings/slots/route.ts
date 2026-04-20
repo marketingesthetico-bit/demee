@@ -40,11 +40,22 @@ export async function GET(req: Request) {
   }
   const dayStartUtc = madridWallClockToUtc(y, m, d, 0, 0);
   const dayEndUtc = madridWallClockToUtc(y, m, d + 1, 0, 0);
-  const existing: ExistingBooking[] = await loadBookingsInRange(
-    bundle.uid,
-    dayStartUtc,
-    dayEndUtc,
-  );
+
+  // Existing-bookings query needs the bookings(ownerUid, startsAt) composite
+  // index. If the index is still building (or missing) we fail open with
+  // "no existing bookings" rather than 500-ing the whole slot grid —
+  // losing slot occlusion is better UX than an empty page with a console
+  // error, and POST /api/bookings still runs its own overlap check before
+  // confirming a booking.
+  let existing: ExistingBooking[] = [];
+  try {
+    existing = await loadBookingsInRange(bundle.uid, dayStartUtc, dayEndUtc);
+  } catch (err) {
+    console.error(
+      "[api/bookings/slots] loadBookingsInRange failed — likely missing composite index",
+      err,
+    );
+  }
 
   const slots = computeAvailableSlots({
     config: bundle.config,
