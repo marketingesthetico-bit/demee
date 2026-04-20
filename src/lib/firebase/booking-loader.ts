@@ -113,3 +113,53 @@ export async function loadBookingsInRange(
     };
   });
 }
+
+export interface LoadedBooking {
+  id: string;
+  ownerUid: string;
+  handle: string;
+  status: "confirmed" | "cancelled" | "completed";
+  guest: { name: string; email: string; phone: string | null; notes: string | null };
+  startsAt: string;
+  endsAt: string;
+  durationMinutes: number;
+  locationType: LocationType;
+  location: string;
+  meetingName: string;
+  createdAt: string | null;
+}
+
+/**
+ * Owner's full booking history, most recent first. Capped at 200 for MVP.
+ */
+export async function loadBookingsForOwner(ownerUid: string): Promise<LoadedBooking[]> {
+  const snap = await getAdminDb()
+    .collection("bookings")
+    .where("ownerUid", "==", ownerUid)
+    .orderBy("startsAt", "desc")
+    .limit(200)
+    .get();
+  return snap.docs.map((doc) => {
+    const data = doc.data();
+    const created = data.createdAt as { toDate?: () => Date } | undefined;
+    return {
+      id: doc.id,
+      ownerUid: data.ownerUid as string,
+      handle: (data.handle as string) ?? "",
+      status: (data.status as LoadedBooking["status"]) ?? "confirmed",
+      guest: {
+        name: (data.guest?.name as string) ?? "",
+        email: (data.guest?.email as string) ?? "",
+        phone: (data.guest?.phone as string | null) ?? null,
+        notes: (data.guest?.notes as string | null) ?? null,
+      },
+      startsAt: data.startsAt as string,
+      endsAt: data.endsAt as string,
+      durationMinutes: (data.durationMinutes as number) ?? 30,
+      locationType: (data.locationType as LocationType) ?? "online",
+      location: (data.location as string) ?? "",
+      meetingName: (data.meetingName as string) ?? "",
+      createdAt: created?.toDate?.().toISOString() ?? null,
+    };
+  });
+}

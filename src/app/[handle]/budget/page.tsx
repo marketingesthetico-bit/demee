@@ -58,7 +58,11 @@ export default async function PublicBudgetPage({ params }: Params) {
         </header>
 
         <div className="mt-10">
-          <BudgetRequestForm handle={handle} config={bundle.config} />
+          <BudgetRequestForm
+            handle={handle}
+            config={bundle.config}
+            hasBooking={profile.hasBooking}
+          />
         </div>
       </main>
     </ThemeProvider>

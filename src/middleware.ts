@@ -2,7 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { SESSION_COOKIE_NAME } from "@/lib/firebase/session-constants";
 
-const PROTECTED_PREFIXES = ["/onboarding", "/dashboard", "/edit", "/leads"];
+const PROTECTED_PREFIXES = [
+  "/onboarding",
+  "/dashboard",
+  "/edit",
+  "/leads",
+  "/bookings",
+];
 const AUTH_PAGES = new Set(["/sign-in", "/sign-up"]);
 
 export function middleware(req: NextRequest) {
@@ -34,6 +40,7 @@ export const config = {
     "/dashboard/:path*",
     "/edit/:path*",
     "/leads/:path*",
+    "/bookings/:path*",
     "/sign-in",
     "/sign-up",
   ],

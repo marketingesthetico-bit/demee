@@ -49,9 +49,10 @@ type Status =
 interface Props {
   handle: string;
   config: BudgetConfig;
+  hasBooking: boolean;
 }
 
-export function BudgetRequestForm({ handle, config }: Props) {
+export function BudgetRequestForm({ handle, config, hasBooking }: Props) {
   const [selections, setSelections] = useState<Selections>(() =>
     buildInitialSelections(config),
   );
@@ -130,12 +131,26 @@ export function BudgetRequestForm({ handle, config }: Props) {
   }
 
   if (status.kind === "sent") {
+    const showBookingCTA = config.suggestBooking && hasBooking;
     return (
-      <div className="space-y-4 rounded-aesthetic-base border border-aesthetic-fg/15 p-6 text-center">
+      <div className="space-y-5 rounded-aesthetic-base border border-aesthetic-fg/15 p-6 text-center">
         <div className="font-aesthetic-display text-2xl">Solicitud enviada</div>
         <p className="text-sm text-aesthetic-fg/80">
           Total estimado: <strong>{euro(status.total)}</strong>. Te responderá pronto.
         </p>
+        {showBookingCTA && (
+          <div className="space-y-3 border-t border-aesthetic-fg/10 pt-5">
+            <p className="text-sm text-aesthetic-fg/70">
+              ¿Quieres que avancemos más rápido? Agenda una llamada de 15-30 min ahora.
+            </p>
+            <a
+              href={`/${handle}/book`}
+              className="inline-flex items-center justify-center rounded-aesthetic-base bg-aesthetic-accent px-4 py-2.5 text-sm font-medium text-aesthetic-accent-contrast hover:opacity-90"
+            >
+              Agendar llamada →
+            </a>
+          </div>
+        )}
       </div>
     );
   }

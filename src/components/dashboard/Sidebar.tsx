@@ -15,10 +15,9 @@ interface SidebarItem {
 const ITEMS: SidebarItem[] = [
   { href: "/dashboard", label: "Inicio", icon: "🏠", status: "ready" },
   { href: "/edit", label: "Mi página", icon: "✏️", status: "ready" },
-  { href: "/budgets", label: "Presupuestos", icon: "💰", status: "soon" },
-  { href: "/calendar", label: "Agenda", icon: "📅", status: "soon" },
-  { href: "/analytics", label: "Analytics", icon: "📊", status: "soon" },
   { href: "/leads", label: "Leads", icon: "📬", status: "ready" },
+  { href: "/bookings", label: "Agenda", icon: "📅", status: "ready" },
+  { href: "/analytics", label: "Analytics", icon: "📊", status: "soon" },
   { href: "/settings", label: "Ajustes", icon: "⚙️", status: "soon" },
 ];
 
