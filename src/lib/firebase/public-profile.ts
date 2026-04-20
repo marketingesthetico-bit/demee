@@ -22,6 +22,12 @@ const FALLBACK_SECTIONS: ProfileSectionKey[] = [
   "contact",
 ];
 
+function coerceHex(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const hex = raw.trim();
+  return /^#[0-9a-f]{6}$/i.test(hex) ? hex : null;
+}
+
 export async function getPublicProfileByHandle(handle: string): Promise<PublicProfile | null> {
   const db = getAdminDb();
   const handleSnap = await db.collection("handles").doc(handle).get();
@@ -64,12 +70,21 @@ export async function getPublicProfileByHandle(handle: string): Promise<PublicPr
       }
     : null;
 
+  const rawColors = data.themeColors as Record<string, unknown> | undefined;
+  const themeColors = {
+    bg: coerceHex(rawColors?.bg),
+    fg: coerceHex(rawColors?.fg),
+    muted: coerceHex(rawColors?.muted),
+    accent: coerceHex(rawColors?.accent),
+  };
+
   return {
     uid,
     handle,
     hasBudget,
     hasBooking,
     bookingTeaser,
+    themeColors,
     industry: (data.industry as Industry | undefined) ?? "other",
     aesthetic: (data.aesthetic as Aesthetic | undefined) ?? "minimal",
     defaultSections:

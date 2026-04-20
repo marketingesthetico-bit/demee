@@ -14,6 +14,7 @@ import type {
   PublicPortfolioItem,
   PublicProfile,
   PublicService,
+  ThemeColorOverrides,
 } from "@/lib/profile/public";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ import { AboutForm } from "./AboutForm";
 import { AestheticPicker } from "./AestheticPicker";
 import { BookingForm } from "./BookingForm";
 import { BudgetForm } from "./BudgetForm";
+import { ColorsForm } from "./ColorsForm";
 import { ContactForm } from "./ContactForm";
 import { HeaderForm } from "./HeaderForm";
 import { ImagesForm } from "./ImagesForm";
@@ -84,6 +86,7 @@ function toPublicPreview(
     portfolio: profile.portfolio,
     gallery: profile.gallery,
     contact: profile.contact,
+    themeColors: profile.themeColors,
   };
 }
 
@@ -96,6 +99,7 @@ type ProfilePatch = Partial<{
   portfolio: PublicPortfolioItem[];
   gallery: PublicGalleryImage[];
   contact: EditableProfile["contact"];
+  themeColors: ThemeColorOverrides;
 }>;
 
 export function EditorShell({
@@ -271,6 +275,11 @@ export function EditorShell({
     scheduleSave({ defaultSections: next });
   }
 
+  function updateThemeColors(next: ThemeColorOverrides) {
+    setProfile((prev) => ({ ...prev, themeColors: next }));
+    scheduleSave({ themeColors: next });
+  }
+
   const preview = toPublicPreview(
     profile,
     handle,
@@ -356,9 +365,27 @@ export function EditorShell({
 
         <SectionCard
           title="Estilo visual"
-          subtitle="Cambia el tema de tu página pública."
+          subtitle="Cambia el tema base de tu página pública."
         >
           <AestheticPicker value={profile.aesthetic} onChange={updateAesthetic} />
+        </SectionCard>
+
+        <SectionCard
+          title="Colores"
+          subtitle="Personaliza la paleta sobre el estilo base."
+          defaultOpen={false}
+        >
+          <ColorsForm
+            value={profile.themeColors}
+            aesthetic={
+              (["minimal", "editorial", "bold"] as SupportedAesthetic[]).includes(
+                profile.aesthetic as SupportedAesthetic,
+              )
+                ? (profile.aesthetic as SupportedAesthetic)
+                : "minimal"
+            }
+            onChange={updateThemeColors}
+          />
         </SectionCard>
 
         <SectionCard
@@ -385,6 +412,7 @@ export function EditorShell({
         </div>
         <ThemeProvider
           aesthetic={profile.aesthetic}
+          overrides={profile.themeColors}
           className="bg-aesthetic-bg font-aesthetic-body text-aesthetic-fg"
         >
           <div className="mx-auto max-w-2xl px-6 py-10 text-sm sm:px-8">

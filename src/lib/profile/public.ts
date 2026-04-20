@@ -55,7 +55,27 @@ export interface PublicProfile {
    * without re-querying. Null when hasBooking is false.
    */
   bookingTeaser: PublicBookingTeaser | null;
+  /**
+   * Optional color overrides layered on top of the aesthetic tokens.
+   * Each field is a hex string "#rrggbb" or null. ThemeProvider merges
+   * these into the CSS variables at render time.
+   */
+  themeColors: ThemeColorOverrides;
 }
+
+export interface ThemeColorOverrides {
+  bg: string | null;
+  fg: string | null;
+  muted: string | null;
+  accent: string | null;
+}
+
+export const EMPTY_THEME_COLORS: ThemeColorOverrides = {
+  bg: null,
+  fg: null,
+  muted: null,
+  accent: null,
+};
 
 export interface PublicBookingTeaser {
   name: string;

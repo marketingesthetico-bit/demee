@@ -37,6 +37,7 @@ export default async function PublicBookPage({ params }: Params) {
   return (
     <ThemeProvider
       aesthetic={profile.aesthetic}
+      overrides={profile.themeColors}
       className="min-h-screen bg-aesthetic-bg font-aesthetic-body text-aesthetic-fg"
     >
       <main className="container max-w-2xl py-12 sm:py-16">

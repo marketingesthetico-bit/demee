@@ -6,7 +6,10 @@ import type {
   PublicPortfolioItem,
   PublicService,
   PublicSocial,
+  ThemeColorOverrides,
 } from "./public";
+
+import { EMPTY_THEME_COLORS } from "./public";
 
 /**
  * Full writable profile shape. Mirrors what is persisted at
@@ -37,6 +40,7 @@ export interface EditableProfile {
     phone: string | null;
     social: PublicSocial;
   };
+  themeColors: ThemeColorOverrides;
   published: boolean;
 }
 
@@ -69,5 +73,6 @@ export const EMPTY_EDITABLE_PROFILE: EditableProfile = {
       website: null,
     },
   },
+  themeColors: EMPTY_THEME_COLORS,
   published: true,
 };

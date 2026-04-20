@@ -78,5 +78,6 @@ export function buildPreviewProfile(params: BuildPreviewParams): PublicProfile |
       email: params.email,
       social,
     },
+    themeColors: { bg: null, fg: null, muted: null, accent: null },
   };
 }

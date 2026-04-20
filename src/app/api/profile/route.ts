@@ -27,6 +27,14 @@ const imageRefSchema = z.object({
   path: z.string().min(1).max(500),
 });
 
+const hexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+const themeColorsSchema = z.object({
+  bg: hexColorSchema.nullable().optional(),
+  fg: hexColorSchema.nullable().optional(),
+  muted: hexColorSchema.nullable().optional(),
+  accent: hexColorSchema.nullable().optional(),
+});
+
 const socialSchema = z.object({
   linkedin: z.string().max(200).nullable().optional(),
   twitter: z.string().max(200).nullable().optional(),
@@ -92,6 +100,7 @@ const patchSchema = z
         social: socialSchema.optional(),
       })
       .optional(),
+    themeColors: themeColorsSchema.optional(),
   })
   .strict();
 
@@ -130,6 +139,7 @@ function flattenForFirestore(
     if (patch.contact.phone !== undefined) out["contact.phone"] = patch.contact.phone;
     if (patch.contact.social !== undefined) out["contact.social"] = patch.contact.social;
   }
+  if (patch.themeColors !== undefined) out.themeColors = patch.themeColors;
 
   return out;
 }

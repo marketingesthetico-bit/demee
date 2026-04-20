@@ -104,6 +104,17 @@ export async function loadOwnProfile(uid: string): Promise<LoadedUserProfile | n
         website: (rawSocial.website as string | null) ?? null,
       },
     },
+    themeColors: (() => {
+      const c = p.themeColors as Record<string, unknown> | undefined;
+      const hex = (v: unknown) =>
+        typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v.trim()) ? v.trim() : null;
+      return {
+        bg: hex(c?.bg),
+        fg: hex(c?.fg),
+        muted: hex(c?.muted),
+        accent: hex(c?.accent),
+      };
+    })(),
     published: p.published !== false,
   };
 

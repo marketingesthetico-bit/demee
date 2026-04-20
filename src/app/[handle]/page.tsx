@@ -50,6 +50,7 @@ export default async function PublicHandlePage({ params }: Params) {
   return (
     <ThemeProvider
       aesthetic={profile.aesthetic}
+      overrides={profile.themeColors}
       className="min-h-screen bg-aesthetic-bg font-aesthetic-body text-aesthetic-fg"
     >
       <main className="container max-w-3xl py-16 pb-32 sm:py-24 sm:pb-40">
