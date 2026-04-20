@@ -24,21 +24,22 @@ const weeklyAvailabilitySchema = z.object({
   sunday: z.array(timeWindowSchema).max(6),
 });
 
-const bodySchema = z
-  .object({
-    enabled: z.boolean().optional(),
-    name: z.string().min(1).max(80).optional(),
-    description: z.string().max(600).optional(),
-    durationMinutes: z.number().int().min(15).max(240).optional(),
-    bufferMinutes: z.number().int().min(0).max(120).optional(),
-    leadTimeHours: z.number().int().min(0).max(240).optional(),
-    maxAdvanceDays: z.number().int().min(1).max(180).optional(),
-    locationType: z.enum(["online", "phone", "in-person"]).optional(),
-    location: z.string().max(400).optional(),
-    introText: z.string().max(600).optional(),
-    availability: weeklyAvailabilitySchema.optional(),
-  })
-  .strict();
+// Not .strict() because the client sends back the full BookingConfig
+// shape (timezone, updatedAt) and we only care about the fields below.
+// Unknown keys are stripped silently by Zod's default behavior.
+const bodySchema = z.object({
+  enabled: z.boolean().optional(),
+  name: z.string().min(1).max(80).optional(),
+  description: z.string().max(600).optional(),
+  durationMinutes: z.number().int().min(15).max(240).optional(),
+  bufferMinutes: z.number().int().min(0).max(120).optional(),
+  leadTimeHours: z.number().int().min(0).max(240).optional(),
+  maxAdvanceDays: z.number().int().min(1).max(180).optional(),
+  locationType: z.enum(["online", "phone", "in-person"]).optional(),
+  location: z.string().max(400).optional(),
+  introText: z.string().max(600).optional(),
+  availability: weeklyAvailabilitySchema.optional(),
+});
 
 export async function PATCH(req: Request) {
   const session = await getServerSession();
