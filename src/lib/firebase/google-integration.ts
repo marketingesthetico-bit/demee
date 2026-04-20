@@ -24,6 +24,28 @@ export interface GoogleIntegration {
 const DOC_PATH = (uid: string) =>
   getAdminDb().collection("users").doc(uid).collection("integrations").doc("google-calendar");
 
+/**
+ * Converts either a Firestore Timestamp, an ISO string, or a Date into
+ * an ISO string — otherwise falls back to `now`. Critical: we pass this
+ * value down to Client Components, and Next.js can't serialize a
+ * Firestore Timestamp object across the server/client boundary, which
+ * is exactly what crashed /edit after the OAuth callback.
+ */
+function isoFromMixed(raw: unknown): string {
+  if (typeof raw === "string") return raw;
+  if (raw && typeof raw === "object") {
+    const obj = raw as { toDate?: () => Date };
+    if (typeof obj.toDate === "function") {
+      try {
+        return obj.toDate().toISOString();
+      } catch {
+        /* fall through */
+      }
+    }
+  }
+  return new Date().toISOString();
+}
+
 export async function loadGoogleIntegration(
   uid: string,
 ): Promise<GoogleIntegration | null> {
@@ -42,7 +64,7 @@ export async function loadGoogleIntegration(
     expiresAt,
     scope: (data.scope as string) ?? "",
     calendarId: (data.calendarId as string) ?? "primary",
-    connectedAt: (data.connectedAt as string) ?? new Date().toISOString(),
+    connectedAt: isoFromMixed(data.connectedAt),
   };
 }
 
