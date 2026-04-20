@@ -53,7 +53,7 @@ export default async function PublicHandlePage({ params }: Params) {
       overrides={profile.themeColors}
       className="min-h-screen bg-aesthetic-bg font-aesthetic-body text-aesthetic-fg"
     >
-      <main className="container max-w-3xl py-16 pb-32 sm:py-24 sm:pb-40">
+      <main className="container max-w-3xl py-16 pb-32 sm:py-24 lg:pb-24">
         <PublicPageBody profile={profile} />
       </main>
       <StickyContactBar profile={profile} />
