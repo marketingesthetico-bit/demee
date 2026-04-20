@@ -5,6 +5,7 @@ import {
   MAX_URLS,
   combineSourcesAndExtract,
 } from "@/lib/ai/combine-sources";
+import type { SupportedAesthetic } from "@/lib/aesthetics";
 import type { SupportedIndustry } from "@/lib/industries";
 import { getServerSession } from "@/lib/firebase/session";
 import { MAX_PDF_BYTES } from "@/lib/scraper/pdf";
@@ -22,6 +23,12 @@ const VALID_INDUSTRIES: readonly SupportedIndustry[] = [
   "coach",
   "marketing-consultant",
   "architect",
+] as const;
+
+const VALID_AESTHETICS: readonly SupportedAesthetic[] = [
+  "minimal",
+  "editorial",
+  "bold",
 ] as const;
 
 export async function POST(req: Request) {
@@ -42,6 +49,12 @@ export async function POST(req: Request) {
   if (!VALID_INDUSTRIES.includes(industry as SupportedIndustry)) {
     return NextResponse.json({ error: "invalid-industry" }, { status: 400 });
   }
+
+  const aestheticRaw = formData.get("aesthetic");
+  const aesthetic =
+    typeof aestheticRaw === "string" && VALID_AESTHETICS.includes(aestheticRaw as SupportedAesthetic)
+      ? (aestheticRaw as SupportedAesthetic)
+      : undefined;
 
   const languageRaw = formData.get("language");
   const language = languageRaw === "English" ? "English" : "Spanish";
@@ -73,15 +86,21 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { imported, sources, tokensUsed } = await combineSourcesAndExtract({
+    const { imported, sources, polished, tokensUsed } = await combineSourcesAndExtract({
       text,
       urls,
       pdf,
       industry: industry as SupportedIndustry,
+      aesthetic,
       language,
     });
 
-    return NextResponse.json({ ok: true, imported, sources, meta: { tokensUsed } });
+    return NextResponse.json({
+      ok: true,
+      imported,
+      sources,
+      meta: { polished, tokensUsed },
+    });
   } catch (err) {
     if (err instanceof AIUnavailableError) {
       const status =

@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { SupportedAesthetic } from "@/lib/aesthetics";
 import type { SupportedIndustry } from "@/lib/industries";
 import { detectScrapeSource } from "@/lib/scraper/detect";
 import { fetchAndExtractText, ScrapeError } from "@/lib/scraper/fetch-html";
@@ -9,6 +10,7 @@ import { extractTextFromPdf } from "@/lib/scraper/pdf";
 import { AIUnavailableError } from "./client";
 import { extractProfile } from "./extract-profile";
 import type { NormalizedImportedProfile } from "./extract-profile-schema";
+import { polishProfile } from "./polish-profile";
 
 export const MAX_COMBINED_CHARS = 24_000;
 export const MAX_URLS = 3;
@@ -25,13 +27,18 @@ export interface CombineInput {
   urls?: string[];
   pdf?: { buffer: Buffer; filename: string } | null;
   industry: SupportedIndustry;
+  aesthetic?: SupportedAesthetic;
   language?: "Spanish" | "English";
 }
 
 export interface CombineResult {
   imported: NormalizedImportedProfile;
   sources: SourceReport[];
-  tokensUsed: { prompt: number; completion: number } | null;
+  polished: boolean;
+  tokensUsed: {
+    extract: { prompt: number; completion: number } | null;
+    polish: { prompt: number; completion: number } | null;
+  };
 }
 
 /**
@@ -193,15 +200,36 @@ export async function combineSourcesAndExtract(
     throw new AIUnavailableError("source-too-short");
   }
 
-  const { normalized, tokensUsed } = await extractProfile({
+  const extract = await extractProfile({
     sourceText: combined,
     industry: input.industry,
     language: input.language ?? "Spanish",
   });
 
-  const merged = githubOverlay ? mergeNormalized(normalized, githubOverlay) : normalized;
+  const withGitHub = githubOverlay
+    ? mergeNormalized(extract.normalized, githubOverlay)
+    : extract.normalized;
 
-  return { imported: merged, sources, tokensUsed };
+  // Copywriter polish pass (industry + aesthetic + stop-slop).
+  // Best-effort: if the polish fails the extraction output is preserved.
+  const polish = input.aesthetic
+    ? await polishProfile({
+        profile: withGitHub,
+        industry: input.industry,
+        aesthetic: input.aesthetic,
+        language: input.language ?? "Spanish",
+      })
+    : null;
+
+  return {
+    imported: polish ? polish.profile : withGitHub,
+    sources,
+    polished: polish !== null && polish.tokensUsed !== null,
+    tokensUsed: {
+      extract: extract.tokensUsed,
+      polish: polish?.tokensUsed ?? null,
+    },
+  };
 }
 
 /**

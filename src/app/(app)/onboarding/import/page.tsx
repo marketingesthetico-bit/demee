@@ -22,7 +22,7 @@ type SourceReport = {
 type ImportStatus =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "success"; summary: string; sources: SourceReport[] }
+  | { kind: "success"; summary: string; sources: SourceReport[]; polished: boolean }
   | { kind: "error"; message: string; sources?: SourceReport[] };
 
 const ERROR_COPY: Record<string, string> = {
@@ -66,6 +66,7 @@ export default function ImportStepPage() {
   const router = useRouter();
   const [industry, setIndustry] = useState<ReturnType<typeof getIndustryConfig>>(null);
   const [industrySlug, setIndustrySlug] = useState<SupportedIndustry | null>(null);
+  const [aestheticSlug, setAestheticSlug] = useState<string | null>(null);
 
   const [description, setDescription] = useState("");
   const [urls, setUrls] = useState<string[]>([""]);
@@ -88,6 +89,7 @@ export default function ImportStepPage() {
     }
     setIndustry(getIndustryConfig(draft.industry));
     setIndustrySlug(draft.industry);
+    setAestheticSlug(draft.aesthetic);
     setHeadline(draft.imported?.headline ?? "");
     setBio(draft.imported?.bio ?? "");
     setSkillsText(draft.imported?.skills?.join(", ") ?? "");
@@ -118,7 +120,7 @@ export default function ImportStepPage() {
     [headline, bio, skills, servicesPreview, portfolioPreview, socialPreview],
   );
 
-  function applyImported(imp: ImportedProfile, sources: SourceReport[]) {
+  function applyImported(imp: ImportedProfile, sources: SourceReport[], polished: boolean) {
     setHeadline(imp.headline ?? "");
     setBio(imp.bio ?? "");
     setSkillsText((imp.skills ?? []).join(", "));
@@ -137,7 +139,7 @@ export default function ImportStepPage() {
       okCount > 0
         ? `Analizadas ${okCount} fuentes → ${parts.length > 0 ? parts.join(", ") : "(perfil inicial)"}. Revísalo abajo.`
         : "Extraído. Revísalo abajo.";
-    setStatus({ kind: "success", summary, sources });
+    setStatus({ kind: "success", summary, sources, polished });
   }
 
   function setUrlAt(index: number, value: string) {
@@ -168,6 +170,7 @@ export default function ImportStepPage() {
     try {
       const form = new FormData();
       form.append("industry", industrySlug);
+      if (aestheticSlug) form.append("aesthetic", aestheticSlug);
       form.append("language", "Spanish");
       if (description.trim()) form.append("text", description.trim());
       for (const u of activeUrls) form.append("urls", u);
@@ -175,7 +178,12 @@ export default function ImportStepPage() {
 
       const res = await fetch("/api/ai/import", { method: "POST", body: form });
       const data = (await res.json()) as
-        | { ok: true; imported: ImportedProfile; sources: SourceReport[] }
+        | {
+            ok: true;
+            imported: ImportedProfile;
+            sources: SourceReport[];
+            meta?: { polished?: boolean };
+          }
         | { error: string; sources?: SourceReport[] };
 
       if (!res.ok || "error" in data) {
@@ -186,7 +194,7 @@ export default function ImportStepPage() {
         });
         return;
       }
-      applyImported(data.imported, data.sources);
+      applyImported(data.imported, data.sources, Boolean(data.meta?.polished));
     } catch (err) {
       console.error(err);
       setStatus({ kind: "error", message: "Error de red. Inténtalo de nuevo." });
@@ -343,7 +351,14 @@ export default function ImportStepPage() {
 
         {status.kind === "success" && (
           <div className="space-y-2 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-sm">
-            <p className="text-success">{status.summary}</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-success">{status.summary}</p>
+              {status.polished && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-olive-100 px-2 py-0.5 text-xs text-olive-700">
+                  ✍️ Redactado por copywriter IA
+                </span>
+              )}
+            </div>
             <SourceList sources={status.sources} />
           </div>
         )}
