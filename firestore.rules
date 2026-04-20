@@ -25,6 +25,13 @@ service cloud.firestore {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == uid;
       }
+
+      // Third-party OAuth tokens (Google Calendar, etc.). Client SDK is
+      // denied entirely — reads + writes go through API routes using the
+      // Admin SDK. The UI only reads a derived "connected" flag.
+      match /integrations/{doc=**} {
+        allow read, write: if false;
+      }
     }
 
     // Handle → uid index. Public read so /[handle] can resolve. Writes are

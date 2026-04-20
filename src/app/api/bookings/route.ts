@@ -7,6 +7,11 @@ import {
   loadBookingsInRange,
   loadPublicBookingConfig,
 } from "@/lib/firebase/booking-loader";
+import { getFreshAccessToken } from "@/lib/firebase/google-integration";
+import {
+  CalendarApiError,
+  createCalendarEvent,
+} from "@/lib/google/calendar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -105,13 +110,59 @@ export async function POST(req: Request) {
     createdAt: FieldValue.serverTimestamp(),
   });
 
-  // Email notifications are intentionally fire-and-forget (commit later
-  // — needs dedicated booking templates).
+  // Google Calendar sync — fire-and-forget. If the freelancer has the
+  // integration connected we add the event to their calendar and pull a
+  // Meet link back onto the booking. Any failure here is logged but
+  // never fails the booking itself.
+  let meetUrl: string | null = null;
+  let calendarEventId: string | null = null;
+  try {
+    const token = await getFreshAccessToken(bundle.uid);
+    if (token) {
+      const description = [
+        `Reserva desde demee.app/${handle}/book`,
+        "",
+        `Cliente: ${parsed.data.guest.name} <${parsed.data.guest.email}>`,
+        parsed.data.guest.phone ? `Teléfono: ${parsed.data.guest.phone}` : null,
+        "",
+        parsed.data.guest.notes ? `Notas:\n${parsed.data.guest.notes}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      const result = await createCalendarEvent({
+        accessToken: token.accessToken,
+        calendarId: token.calendarId,
+        summary: `${bundle.config.name} · ${parsed.data.guest.name}`,
+        description,
+        startIso: startsAt.toISOString(),
+        endIso: endsAt.toISOString(),
+        timeZone: bundle.config.timezone,
+        attendeeEmail: parsed.data.guest.email,
+        withMeet: bundle.config.locationType === "online",
+        requestId: bookingRef.id,
+      });
+      meetUrl = result.meetUrl;
+      calendarEventId = result.eventId;
+      await bookingRef.update({
+        googleCalendarEventId: result.eventId,
+        googleCalendarHtmlLink: result.htmlLink,
+        meetUrl: result.meetUrl,
+      });
+    }
+  } catch (err) {
+    if (err instanceof CalendarApiError) {
+      console.error("[api/bookings] calendar event failed", err.status, err.body.slice(0, 200));
+    } else {
+      console.error("[api/bookings] calendar event unexpected error", err);
+    }
+  }
 
   return NextResponse.json({
     ok: true,
     bookingId: bookingRef.id,
     startsAt: startsAt.toISOString(),
     endsAt: endsAt.toISOString(),
+    meetUrl,
+    calendarEventId,
   });
 }

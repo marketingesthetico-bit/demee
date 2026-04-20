@@ -10,6 +10,11 @@ import { WEEKDAYS } from "@/lib/booking/types";
 import { emptyWindow } from "@/lib/booking/slots";
 import { cn } from "@/lib/utils";
 
+import {
+  GoogleCalendarConnect,
+  type GoogleConnectionStatus,
+} from "./GoogleCalendarConnect";
+
 const WEEKDAY_LABEL: Record<Weekday, string> = {
   monday: "Lunes",
   tuesday: "Martes",
@@ -34,9 +39,10 @@ const LOCATION_TYPE_OPTIONS: { value: LocationType; label: string }[] = [
 interface Props {
   value: BookingConfig;
   onChange: (next: BookingConfig) => void;
+  googleStatus: GoogleConnectionStatus;
 }
 
-export function BookingForm({ value, onChange }: Props) {
+export function BookingForm({ value, onChange, googleStatus }: Props) {
   function patch(changes: Partial<BookingConfig>) {
     onChange({ ...value, ...changes });
   }
@@ -47,6 +53,8 @@ export function BookingForm({ value, onChange }: Props) {
 
   return (
     <div className="space-y-5">
+      <GoogleCalendarConnect initial={googleStatus} />
+
       <div className="flex items-center justify-between gap-3 rounded-md border border-ink/10 bg-paper/40 p-3">
         <div className="space-y-0.5">
           <span className="block text-sm font-medium text-ink">Activar agenda</span>

@@ -24,6 +24,7 @@ import { BookingForm } from "./BookingForm";
 import { BudgetForm } from "./BudgetForm";
 import { ColorsForm } from "./ColorsForm";
 import { ContactForm } from "./ContactForm";
+import type { GoogleConnectionStatus } from "./GoogleCalendarConnect";
 import { HeaderForm } from "./HeaderForm";
 import { ImagesForm } from "./ImagesForm";
 import { PortfolioForm } from "./PortfolioForm";
@@ -44,6 +45,7 @@ interface Props {
   initialProfile: EditableProfile;
   initialBudget: BudgetConfig;
   initialBooking: BookingConfig;
+  initialGoogleStatus: GoogleConnectionStatus;
   handle: string;
 }
 
@@ -106,6 +108,7 @@ export function EditorShell({
   initialProfile,
   initialBudget,
   initialBooking,
+  initialGoogleStatus,
   handle,
 }: Props) {
   const [profile, setProfile] = useState<EditableProfile>(initialProfile);
@@ -367,7 +370,11 @@ export function EditorShell({
           subtitle="Reserva de llamadas en demee.app/tuhandle/book cuando está activa."
           defaultOpen={false}
         >
-          <BookingForm value={booking} onChange={updateBooking} />
+          <BookingForm
+            value={booking}
+            onChange={updateBooking}
+            googleStatus={initialGoogleStatus}
+          />
         </SectionCard>
 
         <SectionCard

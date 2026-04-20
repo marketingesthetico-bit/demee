@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { EditorShell } from "@/components/editor/EditorShell";
+import type { GoogleConnectionStatus } from "@/components/editor/GoogleCalendarConnect";
 import type { SupportedIndustry } from "@/lib/industries";
 import { getServerSession } from "@/lib/firebase/session";
 import { loadOwnBookingConfig } from "@/lib/firebase/booking-loader";
 import { loadOwnBudget } from "@/lib/firebase/budget-loader";
+import { loadGoogleIntegration } from "@/lib/firebase/google-integration";
 import { loadOwnProfile } from "@/lib/firebase/user-profile";
+import { isGoogleOAuthConfigured } from "@/lib/google/oauth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,16 +42,27 @@ export default async function EditPage() {
     ? (loaded.profile.industry as SupportedIndustry)
     : null;
 
-  const [budget, booking] = await Promise.all([
+  const [budget, booking, googleIntegration] = await Promise.all([
     loadOwnBudget(session.uid, industryForTemplate),
     loadOwnBookingConfig(session.uid),
+    loadGoogleIntegration(session.uid),
   ]);
+
+  const googleStatus: GoogleConnectionStatus = {
+    connected:
+      Boolean(googleIntegration) &&
+      Boolean(googleIntegration?.refreshToken),
+    accountEmail: googleIntegration?.accountEmail ?? null,
+    connectedAt: googleIntegration?.connectedAt ?? null,
+    configured: isGoogleOAuthConfigured(),
+  };
 
   return (
     <EditorShell
       initialProfile={loaded.profile}
       initialBudget={budget}
       initialBooking={booking}
+      initialGoogleStatus={googleStatus}
       handle={loaded.handle}
     />
   );

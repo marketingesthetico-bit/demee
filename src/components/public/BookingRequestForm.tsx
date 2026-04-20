@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 type Status =
   | { kind: "idle" }
   | { kind: "submitting" }
-  | { kind: "sent"; startsAt: string; endsAt: string }
+  | { kind: "sent"; startsAt: string; endsAt: string; meetUrl: string | null }
   | { kind: "error"; message: string };
 
 const ERROR_COPY: Record<string, string> = {
@@ -146,6 +146,7 @@ export function BookingRequestForm({ handle, config }: Props) {
         error?: string;
         startsAt?: string;
         endsAt?: string;
+        meetUrl?: string | null;
       };
       if (!res.ok || !data.ok) {
         const msg = ERROR_COPY[data.error ?? ""] ?? "No se pudo reservar.";
@@ -160,6 +161,7 @@ export function BookingRequestForm({ handle, config }: Props) {
         kind: "sent",
         startsAt: data.startsAt ?? selectedSlot.startsAt,
         endsAt: data.endsAt ?? selectedSlot.endsAt,
+        meetUrl: data.meetUrl ?? null,
       });
     } catch (err) {
       console.error(err);
@@ -169,14 +171,24 @@ export function BookingRequestForm({ handle, config }: Props) {
 
   if (status.kind === "sent") {
     return (
-      <div className="space-y-3 rounded-aesthetic-base border border-aesthetic-fg/15 p-6 text-center">
+      <div className="space-y-4 rounded-aesthetic-base border border-aesthetic-fg/15 p-6 text-center">
         <div className="font-aesthetic-display text-2xl">Reunión confirmada</div>
         <p className="text-sm text-aesthetic-fg/80">
           {formatMadridDate(status.startsAt)} · {formatMadridTime(status.startsAt)} –{" "}
           {formatMadridTime(status.endsAt)}
         </p>
+        {status.meetUrl && (
+          <a
+            href={status.meetUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center rounded-aesthetic-base bg-aesthetic-accent px-4 py-2 text-sm font-medium text-aesthetic-accent-contrast hover:opacity-90"
+          >
+            Abrir enlace de Google Meet
+          </a>
+        )}
         <p className="text-xs text-aesthetic-muted">
-          Te llegará un email con los detalles.
+          Te llegará la invitación por email con los detalles.
         </p>
       </div>
     );
