@@ -2,7 +2,6 @@ import type { PublicProfile } from "@/lib/profile/public";
 import type { ProfileSectionKey } from "@/lib/industries";
 
 import { AboutSection } from "./sections/AboutSection";
-import { BookingTeaserSection } from "./sections/BookingTeaserSection";
 import { ContactSection } from "./sections/ContactSection";
 import { GallerySection } from "./sections/GallerySection";
 import { PortfolioSection } from "./sections/PortfolioSection";
@@ -17,7 +16,6 @@ const RENDERERS: Partial<Record<ProfileSectionKey, SectionRenderer>> = {
   services: (profile) => <ServicesSection profile={profile} />,
   gallery: (profile) => <GallerySection profile={profile} />,
   portfolio: (profile) => <PortfolioSection profile={profile} />,
-  booking: (profile) => <BookingTeaserSection profile={profile} />,
   contact: (profile) => <ContactSection profile={profile} />,
 };
 
@@ -31,6 +29,8 @@ export function PublicPageBody({ profile }: { profile: PublicProfile }) {
   const orderedKeys: ProfileSectionKey[] = ["header"];
   for (const key of sections) {
     if (key === "header") continue;
+    // Booking lives only in the sticky bar by design — never in the body.
+    if (key === "booking") continue;
     if (!rendered.has(key)) orderedKeys.push(key);
     rendered.add(key);
   }
@@ -41,16 +41,6 @@ export function PublicPageBody({ profile }: { profile: PublicProfile }) {
     const insertAt = aboutIdx >= 0 ? aboutIdx + 1 : 1;
     orderedKeys.splice(insertAt, 0, "gallery");
     rendered.add("gallery");
-  }
-  // Inject the booking teaser right after services (or after portfolio
-  // if services isn't shown) when the freelancer has an active agenda.
-  if (profile.hasBooking && !rendered.has("booking")) {
-    const servicesIdx = orderedKeys.indexOf("services");
-    const portfolioIdx = orderedKeys.indexOf("portfolio");
-    const anchor = servicesIdx >= 0 ? servicesIdx : portfolioIdx;
-    const insertAt = anchor >= 0 ? anchor + 1 : orderedKeys.length;
-    orderedKeys.splice(insertAt, 0, "booking");
-    rendered.add("booking");
   }
 
   return (

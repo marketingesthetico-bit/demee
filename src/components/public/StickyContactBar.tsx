@@ -21,76 +21,76 @@ type AestheticStyle = {
 };
 
 /**
- * Per-aesthetic treatment — a different feel without needing separate
- * components per theme. Everything is expressed via Tailwind + the
- * aesthetic CSS vars we already have.
+ * Per-aesthetic treatments. The bar is intentionally MORE prominent than
+ * regular page content so it stands apart from everything else the
+ * visitor is scrolling through. Each theme gets a very different feel —
+ * not just token swaps.
  */
 const STYLES: Record<PublicProfile["aesthetic"], AestheticStyle> = {
   minimal: {
     wrapper: "sm:right-6 sm:bottom-6 sm:left-auto",
     container:
-      "flex items-center gap-2 rounded-full border border-aesthetic-fg/15 bg-aesthetic-bg/95 px-3 py-2 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.25)] backdrop-blur",
-    label: "hidden text-xs font-medium text-aesthetic-muted sm:inline",
-    ctaBase: "rounded-full px-3 py-1.5 text-xs font-medium transition",
-    ctaPrimary:
-      "bg-aesthetic-fg text-aesthetic-bg hover:opacity-90",
+      "flex items-center gap-3 rounded-full border-2 border-aesthetic-fg bg-aesthetic-bg px-4 py-2 shadow-[0_20px_40px_-16px_rgba(0,0,0,0.45)]",
+    label: "hidden text-sm font-semibold text-aesthetic-fg sm:inline",
+    ctaBase: "rounded-full px-4 py-2 text-sm font-medium transition",
+    ctaPrimary: "bg-aesthetic-fg text-aesthetic-bg hover:opacity-90",
     ctaSecondary:
-      "border border-aesthetic-fg/20 text-aesthetic-fg/80 hover:border-aesthetic-fg/40",
+      "border border-aesthetic-fg/30 text-aesthetic-fg hover:border-aesthetic-fg",
   },
   editorial: {
     wrapper: "sm:right-6 sm:bottom-6 sm:left-auto",
     container:
-      "flex items-center gap-3 border border-aesthetic-fg/20 bg-aesthetic-bg/95 px-4 py-2.5 shadow-[0_12px_32px_-16px_rgba(139,46,42,0.35)] backdrop-blur",
+      "flex items-center gap-4 border-2 border-aesthetic-accent bg-aesthetic-bg px-5 py-3 shadow-[0_18px_42px_-18px_rgba(139,46,42,0.55)]",
     label:
-      "hidden font-aesthetic-display text-sm italic text-aesthetic-muted sm:inline",
-    ctaBase: "px-3 py-1.5 text-xs font-medium uppercase tracking-wider transition",
+      "hidden font-aesthetic-display text-base italic text-aesthetic-accent sm:inline",
+    ctaBase: "px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition",
     ctaPrimary:
       "bg-aesthetic-accent text-aesthetic-accent-contrast hover:opacity-90",
-    ctaSecondary:
-      "border border-aesthetic-fg/30 text-aesthetic-fg/80 hover:border-aesthetic-fg",
+    ctaSecondary: "text-aesthetic-fg underline-offset-4 hover:underline",
   },
   bold: {
     wrapper: "sm:right-6 sm:bottom-6 sm:left-auto",
     container:
-      "flex items-center gap-2 border-2 border-aesthetic-fg bg-aesthetic-bg px-3 py-2 shadow-[4px_4px_0_0_var(--aesthetic-color-fg)]",
+      "flex items-center gap-3 border-[3px] border-aesthetic-fg bg-aesthetic-accent px-4 py-3 shadow-[6px_6px_0_0_var(--aesthetic-color-fg)]",
     label:
-      "hidden text-[11px] font-bold uppercase tracking-widest text-aesthetic-fg sm:inline",
+      "hidden text-xs font-bold uppercase tracking-[0.3em] text-aesthetic-accent-contrast sm:inline",
     ctaBase:
-      "px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition",
+      "px-4 py-2 text-xs font-bold uppercase tracking-widest transition",
     ctaPrimary:
-      "bg-aesthetic-accent text-aesthetic-accent-contrast hover:opacity-90",
+      "bg-aesthetic-fg text-aesthetic-bg hover:opacity-90",
     ctaSecondary:
-      "border-2 border-aesthetic-fg text-aesthetic-fg hover:bg-aesthetic-fg hover:text-aesthetic-bg",
+      "border-2 border-aesthetic-accent-contrast text-aesthetic-accent-contrast hover:bg-aesthetic-accent-contrast hover:text-aesthetic-accent",
   },
   playful: {
     wrapper: "sm:right-6 sm:bottom-6 sm:left-auto",
     container:
-      "flex items-center gap-2 rounded-3xl border border-aesthetic-fg/10 bg-aesthetic-bg/95 px-4 py-2.5 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.2)] backdrop-blur",
-    label: "hidden text-xs text-aesthetic-muted sm:inline",
-    ctaBase: "rounded-full px-3 py-1.5 text-xs font-medium transition",
+      "flex items-center gap-3 rounded-3xl bg-aesthetic-accent px-5 py-3 shadow-[0_18px_45px_-16px_rgba(0,0,0,0.35)]",
+    label:
+      "hidden text-sm font-medium text-aesthetic-accent-contrast sm:inline",
+    ctaBase: "rounded-full px-4 py-2 text-sm font-medium transition",
     ctaPrimary:
-      "bg-aesthetic-accent text-aesthetic-accent-contrast hover:scale-105",
+      "bg-aesthetic-bg text-aesthetic-fg hover:scale-[1.04]",
     ctaSecondary:
-      "bg-aesthetic-fg/5 text-aesthetic-fg/80 hover:bg-aesthetic-fg/10",
+      "border border-aesthetic-accent-contrast/40 text-aesthetic-accent-contrast hover:bg-aesthetic-accent-contrast/10",
   },
   corporate: {
     wrapper: "sm:right-6 sm:bottom-6 sm:left-auto",
     container:
-      "flex items-center gap-2 rounded-md border border-aesthetic-fg/15 bg-aesthetic-bg/95 px-3 py-2 shadow-md backdrop-blur",
-    label: "hidden text-xs text-aesthetic-muted sm:inline",
-    ctaBase: "rounded-md px-3 py-1.5 text-xs font-medium transition",
+      "flex items-center gap-3 rounded-md border border-aesthetic-fg/15 bg-aesthetic-bg px-4 py-3 shadow-[0_14px_32px_-14px_rgba(0,0,0,0.3)]",
+    label: "hidden text-sm font-medium text-aesthetic-fg sm:inline",
+    ctaBase: "rounded-md px-4 py-2 text-sm font-medium transition",
     ctaPrimary:
       "bg-aesthetic-accent text-aesthetic-accent-contrast hover:opacity-90",
     ctaSecondary:
-      "border border-aesthetic-fg/20 text-aesthetic-fg/80 hover:border-aesthetic-accent hover:text-aesthetic-accent",
+      "border border-aesthetic-fg/20 text-aesthetic-fg hover:border-aesthetic-accent hover:text-aesthetic-accent",
   },
   artistic: {
     wrapper: "sm:right-6 sm:bottom-6 sm:left-auto",
     container:
-      "flex items-center gap-2 rounded-[20px_4px_20px_4px] border border-aesthetic-fg/15 bg-aesthetic-bg/95 px-4 py-2.5 shadow-[0_14px_36px_-18px_rgba(0,0,0,0.3)] backdrop-blur",
-    label: "hidden text-xs italic text-aesthetic-muted sm:inline",
+      "flex items-center gap-3 rounded-[24px_6px_24px_6px] border border-aesthetic-fg/15 bg-aesthetic-bg px-5 py-3 shadow-[0_18px_46px_-20px_rgba(0,0,0,0.35)]",
+    label: "hidden text-sm italic text-aesthetic-fg sm:inline",
     ctaBase:
-      "rounded-[12px_2px_12px_2px] px-3 py-1.5 text-xs font-medium transition",
+      "rounded-[14px_4px_14px_4px] px-4 py-2 text-sm font-medium transition",
     ctaPrimary:
       "bg-aesthetic-accent text-aesthetic-accent-contrast hover:opacity-90",
     ctaSecondary:
@@ -100,7 +100,6 @@ const STYLES: Record<PublicProfile["aesthetic"], AestheticStyle> = {
 
 export function StickyContactBar({ profile }: { profile: PublicProfile }) {
   const [mounted, setMounted] = useState(false);
-  // Avoid hydration mismatch with transitions — render after first paint.
   useEffect(() => setMounted(true), []);
 
   const ctas: CTA[] = [];
