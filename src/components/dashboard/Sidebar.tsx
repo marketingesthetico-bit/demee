@@ -17,8 +17,8 @@ const ITEMS: SidebarItem[] = [
   { href: "/edit", label: "Mi página", icon: "✏️", status: "ready" },
   { href: "/leads", label: "Leads", icon: "📬", status: "ready" },
   { href: "/bookings", label: "Agenda", icon: "📅", status: "ready" },
-  { href: "/analytics", label: "Analytics", icon: "📊", status: "soon" },
-  { href: "/settings", label: "Ajustes", icon: "⚙️", status: "soon" },
+  { href: "/analytics", label: "Analytics", icon: "📊", status: "ready" },
+  { href: "/settings", label: "Ajustes", icon: "⚙️", status: "ready" },
 ];
 
 interface Props {

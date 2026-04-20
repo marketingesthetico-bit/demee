@@ -8,6 +8,8 @@ const PROTECTED_PREFIXES = [
   "/edit",
   "/leads",
   "/bookings",
+  "/analytics",
+  "/settings",
 ];
 const AUTH_PAGES = new Set(["/sign-in", "/sign-up"]);
 
@@ -41,6 +43,8 @@ export const config = {
     "/edit/:path*",
     "/leads/:path*",
     "/bookings/:path*",
+    "/analytics/:path*",
+    "/settings/:path*",
     "/sign-in",
     "/sign-up",
   ],
