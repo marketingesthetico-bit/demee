@@ -1,0 +1,130 @@
+"use client";
+
+import type { PublicPortfolioItem } from "@/lib/profile/public";
+import { cn } from "@/lib/utils";
+
+interface Props {
+  value: PublicPortfolioItem[];
+  onChange: (next: PublicPortfolioItem[]) => void;
+}
+
+export function PortfolioForm({ value, onChange }: Props) {
+  function patchAt(index: number, changes: Partial<PublicPortfolioItem>) {
+    onChange(value.map((s, i) => (i === index ? { ...s, ...changes } : s)));
+  }
+
+  function remove(index: number) {
+    onChange(value.filter((_, i) => i !== index));
+  }
+
+  function move(index: number, delta: number) {
+    const next = [...value];
+    const target = index + delta;
+    if (target < 0 || target >= next.length) return;
+    const [item] = next.splice(index, 1);
+    if (item) next.splice(target, 0, item);
+    onChange(next);
+  }
+
+  function add() {
+    if (value.length >= 12) return;
+    onChange([...value, { title: "Nuevo proyecto", description: "", link: null }]);
+  }
+
+  return (
+    <div className="space-y-4">
+      {value.length === 0 && (
+        <p className="rounded-md border border-dashed border-ink/15 bg-paper/60 px-3 py-4 text-center text-sm text-ink/60">
+          Sin proyectos todavía. Añade el primero.
+        </p>
+      )}
+
+      <ul className="space-y-3">
+        {value.map((item, i) => (
+          <li key={i} className="space-y-3 rounded-md border border-ink/10 bg-paper/40 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <input
+                type="text"
+                value={item.title}
+                onChange={(e) => patchAt(i, { title: e.target.value })}
+                placeholder="Título del proyecto"
+                maxLength={120}
+                className="flex-1 rounded-md border border-ink/15 bg-white px-2.5 py-1.5 text-sm font-medium outline-none focus:border-olive-500 focus:ring-2 focus:ring-olive-500/20"
+              />
+              <div className="flex items-center gap-0.5">
+                <IconButton label="Subir" onClick={() => move(i, -1)} disabled={i === 0}>
+                  ↑
+                </IconButton>
+                <IconButton
+                  label="Bajar"
+                  onClick={() => move(i, +1)}
+                  disabled={i === value.length - 1}
+                >
+                  ↓
+                </IconButton>
+                <IconButton label="Quitar" onClick={() => remove(i)} variant="danger">
+                  ×
+                </IconButton>
+              </div>
+            </div>
+            <textarea
+              value={item.description}
+              onChange={(e) => patchAt(i, { description: e.target.value })}
+              placeholder="Qué hiciste, para quién y qué conseguisteis."
+              rows={2}
+              maxLength={280}
+              className="w-full rounded-md border border-ink/15 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-olive-500 focus:ring-2 focus:ring-olive-500/20"
+            />
+            <input
+              type="url"
+              value={item.link ?? ""}
+              onChange={(e) => patchAt(i, { link: e.target.value.trim() === "" ? null : e.target.value })}
+              placeholder="Enlace (opcional)"
+              className="w-full rounded-md border border-ink/15 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-olive-500 focus:ring-2 focus:ring-olive-500/20"
+            />
+          </li>
+        ))}
+      </ul>
+
+      {value.length < 12 && (
+        <button
+          type="button"
+          onClick={add}
+          className="w-full rounded-md border border-dashed border-ink/20 px-3 py-2 text-sm text-ink/70 hover:border-olive-500 hover:bg-olive-50"
+        >
+          + Añadir proyecto
+        </button>
+      )}
+    </div>
+  );
+}
+
+function IconButton({
+  children,
+  onClick,
+  disabled,
+  label,
+  variant,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  label: string;
+  variant?: "danger";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className={cn(
+        "flex h-7 w-7 items-center justify-center rounded text-sm transition",
+        "hover:bg-ink/10 disabled:cursor-not-allowed disabled:opacity-30",
+        variant === "danger" && "hover:bg-danger/10 hover:text-danger",
+      )}
+    >
+      {children}
+    </button>
+  );
+}

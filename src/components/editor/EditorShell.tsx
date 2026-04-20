@@ -5,14 +5,25 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PublicPageBody } from "@/components/public/PublicPageBody";
 import { ThemeProvider } from "@/components/public/ThemeProvider";
 import type { SupportedAesthetic } from "@/lib/aesthetics";
+import type { ProfileSectionKey } from "@/lib/industries";
 import type { EditableProfile } from "@/lib/profile/editable";
-import type { PublicProfile } from "@/lib/profile/public";
+import type {
+  PublicGalleryImage,
+  PublicPortfolioItem,
+  PublicProfile,
+  PublicService,
+} from "@/lib/profile/public";
 import { cn } from "@/lib/utils";
 
 import { AboutForm } from "./AboutForm";
 import { AestheticPicker } from "./AestheticPicker";
+import { ContactForm } from "./ContactForm";
 import { HeaderForm } from "./HeaderForm";
+import { ImagesForm } from "./ImagesForm";
+import { PortfolioForm } from "./PortfolioForm";
 import { SectionCard } from "./SectionCard";
+import { SectionsToggle } from "./SectionsToggle";
+import { ServicesForm } from "./ServicesForm";
 
 type SaveStatus =
   | { kind: "clean" }
@@ -56,8 +67,13 @@ function toPublicPreview(profile: EditableProfile, handle: string): PublicProfil
 
 type ProfilePatch = Partial<{
   aesthetic: SupportedAesthetic;
+  defaultSections: ProfileSectionKey[];
   header: EditableProfile["header"];
   about: EditableProfile["about"];
+  services: PublicService[];
+  portfolio: PublicPortfolioItem[];
+  gallery: PublicGalleryImage[];
+  contact: EditableProfile["contact"];
 }>;
 
 export function EditorShell({ initialProfile, handle }: Props) {
@@ -128,6 +144,31 @@ export function EditorShell({ initialProfile, handle }: Props) {
     scheduleSave({ aesthetic: next });
   }
 
+  function updateServices(next: PublicService[]) {
+    setProfile((prev) => ({ ...prev, services: next }));
+    scheduleSave({ services: next });
+  }
+
+  function updatePortfolio(next: PublicPortfolioItem[]) {
+    setProfile((prev) => ({ ...prev, portfolio: next }));
+    scheduleSave({ portfolio: next });
+  }
+
+  function updateGallery(next: PublicGalleryImage[]) {
+    setProfile((prev) => ({ ...prev, gallery: next }));
+    scheduleSave({ gallery: next });
+  }
+
+  function updateContact(next: EditableProfile["contact"]) {
+    setProfile((prev) => ({ ...prev, contact: next }));
+    scheduleSave({ contact: next });
+  }
+
+  function updateDefaultSections(next: ProfileSectionKey[]) {
+    setProfile((prev) => ({ ...prev, defaultSections: next }));
+    scheduleSave({ defaultSections: next });
+  }
+
   const preview = toPublicPreview(profile, handle);
 
   return (
@@ -146,6 +187,27 @@ export function EditorShell({ initialProfile, handle }: Props) {
           <AboutForm value={profile.about} onChange={updateAbout} />
         </SectionCard>
 
+        <SectionCard title="Imágenes" subtitle="Foto de perfil y galería de trabajo.">
+          <ImagesForm
+            header={profile.header}
+            gallery={profile.gallery}
+            onHeaderChange={updateHeader}
+            onGalleryChange={updateGallery}
+          />
+        </SectionCard>
+
+        <SectionCard title="Servicios" subtitle="Lo que ofreces, con precio opcional.">
+          <ServicesForm value={profile.services} onChange={updateServices} />
+        </SectionCard>
+
+        <SectionCard title="Portfolio" subtitle="Proyectos con título, descripción y enlace.">
+          <PortfolioForm value={profile.portfolio} onChange={updatePortfolio} />
+        </SectionCard>
+
+        <SectionCard title="Contacto" subtitle="Email, teléfono y redes sociales.">
+          <ContactForm value={profile.contact} onChange={updateContact} />
+        </SectionCard>
+
         <SectionCard
           title="Estilo visual"
           subtitle="Cambia el tema de tu página pública."
@@ -153,9 +215,16 @@ export function EditorShell({ initialProfile, handle }: Props) {
           <AestheticPicker value={profile.aesthetic} onChange={updateAesthetic} />
         </SectionCard>
 
-        <p className="pt-4 text-center text-xs text-ink/40">
-          Más secciones (portfolio, galería, servicios, contacto) llegan en los siguientes commits.
-        </p>
+        <SectionCard
+          title="Secciones visibles"
+          subtitle="Elige qué mostrar en tu página pública."
+          defaultOpen={false}
+        >
+          <SectionsToggle
+            value={profile.defaultSections}
+            onChange={updateDefaultSections}
+          />
+        </SectionCard>
       </section>
 
       <section className="flex-1 border-t border-ink/10 lg:border-l lg:border-t-0">
