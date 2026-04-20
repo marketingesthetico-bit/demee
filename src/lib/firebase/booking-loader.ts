@@ -90,8 +90,14 @@ export async function loadPublicBookingConfig(
 
 /**
  * Returns bookings that overlap the [fromUtc, toUtc] window for an owner.
- * Used both for the public slot calculator (to block already-booked slots)
- * and the owner's bookings dashboard.
+ * Used both for the public slot calculator and the overlap check before
+ * confirming a new booking.
+ *
+ * We query by ownerUid alone (a single-field where, no composite index
+ * needed) and filter in-memory. For a freelancer at MVP scale total
+ * bookings stay comfortably under 1k — the network round-trip is the
+ * dominant cost either way, and this means the hot path doesn't depend
+ * on the bookings(ownerUid, startsAt) index existing.
  */
 export async function loadBookingsInRange(
   ownerUid: string,
@@ -101,17 +107,27 @@ export async function loadBookingsInRange(
   const snap = await getAdminDb()
     .collection("bookings")
     .where("ownerUid", "==", ownerUid)
-    .where("startsAt", ">=", fromUtc.toISOString())
-    .where("startsAt", "<", toUtc.toISOString())
     .get();
-  return snap.docs.map((doc) => {
+  const fromIso = fromUtc.toISOString();
+  const toIso = toUtc.toISOString();
+  const result: { startsAt: string; endsAt: string; status: string }[] = [];
+  for (const doc of snap.docs) {
     const data = doc.data();
-    return {
-      startsAt: data.startsAt as string,
-      endsAt: data.endsAt as string,
-      status: (data.status as string) ?? "confirmed",
-    };
-  });
+    const startsAt = data.startsAt as string | undefined;
+    const endsAt = data.endsAt as string | undefined;
+    if (!startsAt || !endsAt) continue;
+    // Overlap check: booking intersects [from, to) if it starts before `to`
+    // and ends after `from`. Using string comparison works because ISO
+    // timestamps are lexicographically ordered.
+    if (startsAt < toIso && endsAt > fromIso) {
+      result.push({
+        startsAt,
+        endsAt,
+        status: (data.status as string) ?? "confirmed",
+      });
+    }
+  }
+  return result;
 }
 
 export interface LoadedBooking {

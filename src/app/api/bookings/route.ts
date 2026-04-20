@@ -3,7 +3,10 @@ import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
 
 import { getAdminDb } from "@/lib/firebase/admin";
-import { loadPublicBookingConfig } from "@/lib/firebase/booking-loader";
+import {
+  loadBookingsInRange,
+  loadPublicBookingConfig,
+} from "@/lib/firebase/booking-loader";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,22 +68,19 @@ export async function POST(req: Request) {
   // Server-side overlap check. Firestore doesn't have range locks, so
   // this is best-effort (a second concurrent booking for the exact same
   // slot is possible but extremely unlikely at MVP traffic).
+  // Uses the same index-free loader the slots endpoint uses.
   const bufferMs = Math.max(0, bundle.config.bufferMinutes) * 60_000;
-  const winStart = new Date(startsAt.getTime() - bufferMs).toISOString();
-  const winEnd = new Date(endsAt.getTime() + bufferMs).toISOString();
-  const overlapSnap = await db
-    .collection("bookings")
-    .where("ownerUid", "==", bundle.uid)
-    .where("startsAt", "<", winEnd)
-    .get();
-  const hasOverlap = overlapSnap.docs.some((doc) => {
-    const data = doc.data();
-    if (data.status === "cancelled") return false;
-    const otherEnd = data.endsAt as string;
-    return otherEnd > winStart;
-  });
-  if (hasOverlap) {
-    return NextResponse.json({ error: "slot-taken" }, { status: 409 });
+  const winStart = new Date(startsAt.getTime() - bufferMs);
+  const winEnd = new Date(endsAt.getTime() + bufferMs);
+  try {
+    const conflicts = await loadBookingsInRange(bundle.uid, winStart, winEnd);
+    const hasOverlap = conflicts.some((c) => c.status !== "cancelled");
+    if (hasOverlap) {
+      return NextResponse.json({ error: "slot-taken" }, { status: 409 });
+    }
+  } catch (err) {
+    console.error("[api/bookings] overlap check failed", err);
+    return NextResponse.json({ error: "server-error" }, { status: 500 });
   }
 
   const bookingRef = db.collection("bookings").doc();
