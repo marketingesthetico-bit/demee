@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PublicPageBody } from "@/components/public/PublicPageBody";
 import { ThemeProvider } from "@/components/public/ThemeProvider";
 import type { SupportedAesthetic } from "@/lib/aesthetics";
+import type { BudgetConfig } from "@/lib/budget/types";
 import type { ProfileSectionKey } from "@/lib/industries";
 import type { EditableProfile } from "@/lib/profile/editable";
 import type {
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 import { AboutForm } from "./AboutForm";
 import { AestheticPicker } from "./AestheticPicker";
+import { BudgetForm } from "./BudgetForm";
 import { ContactForm } from "./ContactForm";
 import { HeaderForm } from "./HeaderForm";
 import { ImagesForm } from "./ImagesForm";
@@ -36,6 +38,7 @@ const SAVE_DEBOUNCE_MS = 800;
 
 interface Props {
   initialProfile: EditableProfile;
+  initialBudget: BudgetConfig;
   handle: string;
 }
 
@@ -43,10 +46,15 @@ interface Props {
  * Converts the editable profile into the shape PublicPageBody consumes.
  * Pure projection — no effects.
  */
-function toPublicPreview(profile: EditableProfile, handle: string): PublicProfile {
+function toPublicPreview(
+  profile: EditableProfile,
+  handle: string,
+  hasBudget: boolean,
+): PublicProfile {
   return {
     uid: "preview",
     handle,
+    hasBudget,
     industry: profile.industry,
     aesthetic: profile.aesthetic,
     defaultSections: profile.defaultSections,
@@ -76,12 +84,15 @@ type ProfilePatch = Partial<{
   contact: EditableProfile["contact"];
 }>;
 
-export function EditorShell({ initialProfile, handle }: Props) {
+export function EditorShell({ initialProfile, initialBudget, handle }: Props) {
   const [profile, setProfile] = useState<EditableProfile>(initialProfile);
+  const [budget, setBudget] = useState<BudgetConfig>(initialBudget);
   const [status, setStatus] = useState<SaveStatus>({ kind: "clean" });
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
   const pendingPatch = useRef<ProfilePatch>({});
+  const pendingBudget = useRef<BudgetConfig | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const budgetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flushSave = useCallback(async () => {
     const patch = pendingPatch.current;
@@ -124,9 +135,43 @@ export function EditorShell({ initialProfile, handle }: Props) {
     [flushSave],
   );
 
+  const flushBudgetSave = useCallback(async () => {
+    const next = pendingBudget.current;
+    if (!next) {
+      setStatus({ kind: "clean" });
+      return;
+    }
+    pendingBudget.current = null;
+    setStatus({ kind: "saving" });
+    try {
+      const res = await fetch("/api/budget", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      if (!res.ok) {
+        setStatus({ kind: "error", message: "No se pudo guardar el presupuesto." });
+        return;
+      }
+      setStatus({ kind: "saved", at: Date.now() });
+    } catch (err) {
+      console.error("[editor/budget] save failed", err);
+      setStatus({ kind: "error", message: "Error de red." });
+    }
+  }, []);
+
+  function updateBudget(next: BudgetConfig) {
+    setBudget(next);
+    pendingBudget.current = next;
+    setStatus({ kind: "dirty" });
+    if (budgetTimerRef.current) clearTimeout(budgetTimerRef.current);
+    budgetTimerRef.current = setTimeout(flushBudgetSave, SAVE_DEBOUNCE_MS);
+  }
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (budgetTimerRef.current) clearTimeout(budgetTimerRef.current);
     };
   }, []);
 
@@ -170,7 +215,11 @@ export function EditorShell({ initialProfile, handle }: Props) {
     scheduleSave({ defaultSections: next });
   }
 
-  const preview = toPublicPreview(profile, handle);
+  const preview = toPublicPreview(
+    profile,
+    handle,
+    budget.enabled && budget.items.length > 0,
+  );
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-[1400px] flex-col lg:flex-row">
@@ -230,6 +279,14 @@ export function EditorShell({ initialProfile, handle }: Props) {
 
         <SectionCard title="Contacto" subtitle="Email, teléfono y redes sociales.">
           <ContactForm value={profile.contact} onChange={updateContact} />
+        </SectionCard>
+
+        <SectionCard
+          title="Presupuestador"
+          subtitle="Vive en demee.app/tuhandle/budget cuando está activo."
+          defaultOpen={false}
+        >
+          <BudgetForm value={budget} onChange={updateBudget} />
         </SectionCard>
 
         <SectionCard

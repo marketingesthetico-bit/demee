@@ -18,7 +18,7 @@ const ITEMS: SidebarItem[] = [
   { href: "/budgets", label: "Presupuestos", icon: "💰", status: "soon" },
   { href: "/calendar", label: "Agenda", icon: "📅", status: "soon" },
   { href: "/analytics", label: "Analytics", icon: "📊", status: "soon" },
-  { href: "/leads", label: "Leads", icon: "📬", status: "soon" },
+  { href: "/leads", label: "Leads", icon: "📬", status: "ready" },
   { href: "/settings", label: "Ajustes", icon: "⚙️", status: "soon" },
 ];
 
