@@ -67,11 +67,15 @@ export function buildPreviewProfile(params: BuildPreviewParams): PublicProfile |
       priceFrom: null,
       unit: null,
     })),
-    portfolio: (imported.portfolio ?? []).map((p) => ({
+    portfolio: (imported.portfolio ?? []).map((p, i) => ({
+      id: `preview-${i}`,
       title: p.title,
       description: p.description,
       link: p.link ?? null,
       image: p.image ?? null,
+      createdAt: null,
+      hasDetailPage: false,
+      detail: null,
     })),
     gallery,
     contact: {

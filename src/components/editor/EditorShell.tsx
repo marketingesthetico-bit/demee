@@ -339,8 +339,15 @@ export function EditorShell({
           <ServicesForm value={profile.services} onChange={updateServices} />
         </SectionCard>
 
-        <SectionCard title="Portfolio" subtitle="Proyectos con título, descripción y enlace.">
-          <PortfolioForm value={profile.portfolio} onChange={updatePortfolio} />
+        <SectionCard
+          title="Portfolio"
+          subtitle="Proyectos con imagen, fecha y opción de página de detalles."
+        >
+          <PortfolioForm
+            value={profile.portfolio}
+            onChange={updatePortfolio}
+            handle={handle}
+          />
         </SectionCard>
 
         <SectionCard title="Contacto" subtitle="Email, teléfono y redes sociales.">

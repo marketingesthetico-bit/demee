@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   ACCEPTED_IMAGE_TYPES,
@@ -10,7 +10,13 @@ import {
   generatePortfolioPath,
   uploadUserImage,
 } from "@/lib/firebase/storage-client";
-import type { PublicPortfolioItem } from "@/lib/profile/public";
+import type {
+  PortfolioDetail,
+  PortfolioVideo,
+  PublicGalleryImage,
+  PublicPortfolioItem,
+} from "@/lib/profile/public";
+import { detectVideoProvider } from "@/lib/profile/video-embed";
 import { cn } from "@/lib/utils";
 
 const UPLOAD_ERRORS: Record<string, string> = {
@@ -20,85 +26,140 @@ const UPLOAD_ERRORS: Record<string, string> = {
   "upload-failed": "No se pudo subir. Reintenta.",
 };
 
+function genId(): string {
+  return `p${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
 interface Props {
   value: PublicPortfolioItem[];
   onChange: (next: PublicPortfolioItem[]) => void;
+  handle: string;
 }
 
-export function PortfolioForm({ value, onChange }: Props) {
-  function patchAt(index: number, changes: Partial<PublicPortfolioItem>) {
-    onChange(value.map((s, i) => (i === index ? { ...s, ...changes } : s)));
+function formatDate(iso: string | null): string {
+  if (!iso) return "sin fecha";
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "sin fecha";
+  const diffMs = Date.now() - d.getTime();
+  const days = Math.floor(diffMs / 86_400_000);
+  if (days < 1) return "hoy";
+  if (days < 7) return `hace ${days} d`;
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(d);
+}
+
+function emptyDetail(): PortfolioDetail {
+  return { longDescription: "", images: [], videos: [] };
+}
+
+export function PortfolioForm({ value, onChange, handle }: Props) {
+  // Always display in reverse chronological order. The array passed in
+  // mirrors persistence; we sort a view copy so edits don't thrash.
+  const sorted = useMemo(() => {
+    return [...value].sort((a, b) => {
+      const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bd - ad;
+    });
+  }, [value]);
+
+  function patch(id: string, changes: Partial<PublicPortfolioItem>) {
+    onChange(value.map((s) => (s.id === id ? { ...s, ...changes } : s)));
   }
 
-  function remove(index: number) {
-    const target = value[index];
+  function remove(id: string) {
+    const target = value.find((v) => v.id === id);
     if (target?.image?.path) void deleteUserImage(target.image.path);
-    onChange(value.filter((_, i) => i !== index));
-  }
-
-  function move(index: number, delta: number) {
-    const next = [...value];
-    const target = index + delta;
-    if (target < 0 || target >= next.length) return;
-    const [item] = next.splice(index, 1);
-    if (item) next.splice(target, 0, item);
-    onChange(next);
+    if (target?.detail?.images) {
+      for (const img of target.detail.images) void deleteUserImage(img.path);
+    }
+    onChange(value.filter((s) => s.id !== id));
   }
 
   function add() {
     if (value.length >= 12) return;
     onChange([
       ...value,
-      { title: "Nuevo proyecto", description: "", link: null, image: null },
+      {
+        id: genId(),
+        title: "Nuevo proyecto",
+        description: "",
+        link: null,
+        image: null,
+        createdAt: new Date().toISOString(),
+        hasDetailPage: false,
+        detail: null,
+      },
     ]);
+  }
+
+  function toggleDetail(id: string, next: boolean) {
+    const item = value.find((v) => v.id === id);
+    if (!item) return;
+    patch(id, {
+      hasDetailPage: next,
+      detail: next ? item.detail ?? emptyDetail() : item.detail,
+    });
+  }
+
+  function patchDetail(id: string, changes: Partial<PortfolioDetail>) {
+    const item = value.find((v) => v.id === id);
+    if (!item) return;
+    const current = item.detail ?? emptyDetail();
+    patch(id, { detail: { ...current, ...changes } });
   }
 
   return (
     <div className="space-y-4">
-      {value.length === 0 && (
+      {sorted.length === 0 && (
         <p className="rounded-md border border-dashed border-ink/15 bg-paper/60 px-3 py-4 text-center text-sm text-ink/60">
           Sin proyectos todavía. Añade el primero.
         </p>
       )}
 
       <ul className="space-y-3">
-        {value.map((item, i) => (
-          <li key={i} className="space-y-3 rounded-md border border-ink/10 bg-paper/40 p-3">
+        {sorted.map((item) => (
+          <li key={item.id} className="space-y-3 rounded-md border border-ink/10 bg-paper/40 p-3">
             <div className="flex items-start justify-between gap-2">
               <input
                 type="text"
                 value={item.title}
-                onChange={(e) => patchAt(i, { title: e.target.value })}
+                onChange={(e) => patch(item.id, { title: e.target.value })}
                 placeholder="Título del proyecto"
                 maxLength={120}
                 className="flex-1 rounded-md border border-ink/15 bg-white px-2.5 py-1.5 text-sm font-medium outline-none focus:border-olive-500 focus:ring-2 focus:ring-olive-500/20"
               />
-              <div className="flex items-center gap-0.5">
-                <IconButton label="Subir" onClick={() => move(i, -1)} disabled={i === 0}>
-                  ↑
-                </IconButton>
-                <IconButton
-                  label="Bajar"
-                  onClick={() => move(i, +1)}
-                  disabled={i === value.length - 1}
+              <IconButton label="Quitar" onClick={() => remove(item.id)} variant="danger">
+                ×
+              </IconButton>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-ink/50">
+              <span>Añadido {formatDate(item.createdAt)}</span>
+              {item.hasDetailPage && (
+                <a
+                  href={`/${handle}/work/${item.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-olive-700 hover:underline"
                 >
-                  ↓
-                </IconButton>
-                <IconButton label="Quitar" onClick={() => remove(i)} variant="danger">
-                  ×
-                </IconButton>
-              </div>
+                  Ver página ↗
+                </a>
+              )}
             </div>
 
             <div className="flex gap-3">
               <PortfolioImageSlot
                 image={item.image}
-                onChange={(next) => patchAt(i, { image: next })}
+                onChange={(next) => patch(item.id, { image: next })}
               />
               <div className="flex flex-1 flex-col gap-2">
                 <textarea
                   value={item.description}
-                  onChange={(e) => patchAt(i, { description: e.target.value })}
+                  onChange={(e) => patch(item.id, { description: e.target.value })}
                   placeholder="Qué hiciste, para quién y qué conseguisteis."
                   rows={3}
                   maxLength={280}
@@ -108,13 +169,35 @@ export function PortfolioForm({ value, onChange }: Props) {
                   type="url"
                   value={item.link ?? ""}
                   onChange={(e) =>
-                    patchAt(i, { link: e.target.value.trim() === "" ? null : e.target.value })
+                    patch(item.id, { link: e.target.value.trim() === "" ? null : e.target.value })
                   }
-                  placeholder="Enlace (opcional)"
+                  placeholder="Enlace externo (opcional)"
                   className="w-full rounded-md border border-ink/15 bg-white px-2.5 py-1.5 text-sm outline-none focus:border-olive-500 focus:ring-2 focus:ring-olive-500/20"
                 />
               </div>
             </div>
+
+            <div className="flex items-start justify-between gap-3 rounded-md border border-ink/10 bg-white p-3">
+              <div className="space-y-0.5">
+                <div className="text-sm font-medium text-ink">Página de detalles</div>
+                <div className="text-xs text-ink/60">
+                  {item.hasDetailPage
+                    ? `Vive en /${handle}/work/${item.id}`
+                    : "Añade texto largo, imágenes y vídeos en una página propia."}
+                </div>
+              </div>
+              <Switch
+                on={item.hasDetailPage}
+                onClick={() => toggleDetail(item.id, !item.hasDetailPage)}
+              />
+            </div>
+
+            {item.hasDetailPage && (
+              <DetailEditor
+                detail={item.detail ?? emptyDetail()}
+                onChange={(changes) => patchDetail(item.id, changes)}
+              />
+            )}
           </li>
         ))}
       </ul>
@@ -128,6 +211,235 @@ export function PortfolioForm({ value, onChange }: Props) {
           + Añadir proyecto
         </button>
       )}
+    </div>
+  );
+}
+
+function DetailEditor({
+  detail,
+  onChange,
+}: {
+  detail: PortfolioDetail;
+  onChange: (next: Partial<PortfolioDetail>) => void;
+}) {
+  return (
+    <div className="space-y-4 rounded-md border border-olive-200 bg-olive-50/40 p-3">
+      <label className="block space-y-1.5">
+        <span className="text-xs font-medium uppercase tracking-wide text-ink/60">
+          Descripción larga
+        </span>
+        <textarea
+          value={detail.longDescription}
+          onChange={(e) => onChange({ longDescription: e.target.value })}
+          rows={6}
+          maxLength={6000}
+          placeholder="El contexto, las decisiones clave, los resultados. Puedes usar varios párrafos."
+          className="w-full rounded-md border border-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-olive-500 focus:ring-2 focus:ring-olive-500/20"
+        />
+      </label>
+
+      <DetailImagesField
+        images={detail.images}
+        onChange={(images) => onChange({ images })}
+      />
+
+      <DetailVideosField
+        videos={detail.videos}
+        onChange={(videos) => onChange({ videos })}
+      />
+    </div>
+  );
+}
+
+function DetailImagesField({
+  images,
+  onChange,
+}: {
+  images: PublicGalleryImage[];
+  onChange: (next: PublicGalleryImage[]) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  async function addFiles(files: FileList) {
+    setError(null);
+    const remaining = 12 - images.length;
+    if (remaining <= 0) {
+      setError("Máximo 12 imágenes.");
+      return;
+    }
+    const chosen = Array.from(files).slice(0, remaining);
+    setUploading(chosen.length);
+    const added: PublicGalleryImage[] = [];
+    for (const f of chosen) {
+      try {
+        const uploaded = await uploadUserImage({
+          file: f,
+          relativePath: generatePortfolioPath(f),
+        });
+        added.push({ url: uploaded.url, path: uploaded.path });
+      } catch (err) {
+        const code = err instanceof ImageUploadError ? err.code : "upload-failed";
+        setError(UPLOAD_ERRORS[code] ?? "Error.");
+      } finally {
+        setUploading((n) => Math.max(0, n - 1));
+      }
+    }
+    if (added.length > 0) onChange([...images, ...added]);
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  async function remove(idx: number) {
+    const t = images[idx];
+    if (!t) return;
+    await deleteUserImage(t.path);
+    onChange(images.filter((_, i) => i !== idx));
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wide text-ink/60">
+          Imágenes del proyecto
+        </span>
+        <span className="text-[11px] text-ink/50">{images.length} / 12</span>
+      </div>
+      <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+        {images.map((img, i) => (
+          <div
+            key={img.path}
+            className="group relative aspect-square overflow-hidden rounded-md border border-ink/10 bg-white"
+          >
+            <Image src={img.url} alt="" fill sizes="80px" className="object-cover" />
+            <button
+              type="button"
+              onClick={() => void remove(i)}
+              aria-label="Quitar imagen"
+              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-[11px] text-white opacity-0 transition group-hover:opacity-100"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        {Array.from({ length: uploading }).map((_, i) => (
+          <div
+            key={`up-${i}`}
+            className="aspect-square animate-pulse rounded-md border border-ink/10 bg-ink/5"
+          />
+        ))}
+        {images.length < 12 && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex aspect-square items-center justify-center rounded-md border-2 border-dashed border-ink/20 text-xs text-ink/60 hover:border-olive-500 hover:bg-white"
+          >
+            + imagen
+          </button>
+        )}
+      </div>
+      {error && <p className="text-xs text-danger">{error}</p>}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPTED_IMAGE_TYPES.join(",")}
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) void addFiles(e.target.files);
+        }}
+      />
+    </div>
+  );
+}
+
+function DetailVideosField({
+  videos,
+  onChange,
+}: {
+  videos: PortfolioVideo[];
+  onChange: (next: PortfolioVideo[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  function add() {
+    setError(null);
+    const url = draft.trim();
+    if (!url) return;
+    const provider = detectVideoProvider(url);
+    if (!provider) {
+      setError("Solo YouTube, Vimeo o archivos .mp4 / .webm / .ogg.");
+      return;
+    }
+    if (videos.length >= 6) {
+      setError("Máximo 6 vídeos.");
+      return;
+    }
+    onChange([...videos, { url, provider }]);
+    setDraft("");
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wide text-ink/60">
+          Vídeos
+        </span>
+        <span className="text-[11px] text-ink/50">{videos.length} / 6</span>
+      </div>
+
+      {videos.length > 0 && (
+        <ul className="space-y-1.5">
+          {videos.map((v, i) => (
+            <li
+              key={`${v.url}-${i}`}
+              className="flex items-center justify-between gap-2 rounded-md border border-ink/10 bg-white px-2.5 py-1.5 text-xs"
+            >
+              <div className="min-w-0 flex-1">
+                <span className="rounded bg-ink/5 px-1.5 py-0.5 font-mono text-[10px] uppercase text-ink/60">
+                  {v.provider}
+                </span>{" "}
+                <span className="truncate align-middle text-ink/70">{v.url}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onChange(videos.filter((_, idx) => idx !== i))}
+                aria-label="Quitar vídeo"
+                className="text-ink/50 hover:text-danger"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {videos.length < 6 && (
+        <div className="flex gap-1.5">
+          <input
+            type="url"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                add();
+              }
+            }}
+            placeholder="https://youtube.com/watch?v=… · vimeo.com/… · *.mp4"
+            className="flex-1 rounded-md border border-ink/15 bg-white px-2.5 py-1.5 text-xs outline-none focus:border-olive-500"
+          />
+          <button
+            type="button"
+            onClick={add}
+            className="rounded-md border border-ink/15 bg-white px-3 py-1.5 text-xs text-ink/70 hover:bg-ink/5"
+          >
+            Añadir
+          </button>
+        </div>
+      )}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }
@@ -208,6 +520,27 @@ function PortfolioImageSlot({
         }}
       />
     </div>
+  );
+}
+
+function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={cn(
+        "relative inline-flex h-5 w-9 items-center rounded-full transition",
+        on ? "bg-olive-500" : "bg-ink/20",
+      )}
+    >
+      <span
+        className={cn(
+          "inline-block h-4 w-4 rounded-full bg-white shadow transition",
+          on ? "translate-x-[18px]" : "translate-x-[2px]",
+        )}
+      />
+    </button>
   );
 }
 

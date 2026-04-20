@@ -3,6 +3,14 @@ import "server-only";
 import type { Aesthetic, Industry } from "@/types/profile";
 import type { ProfileSectionKey } from "@/lib/industries";
 import type { EditableProfile } from "@/lib/profile/editable";
+import type {
+  PortfolioDetail,
+  PortfolioVideo,
+  PublicGalleryImage,
+  PublicPortfolioItem,
+  VideoProvider,
+} from "@/lib/profile/public";
+import { detectVideoProvider } from "@/lib/profile/video-embed";
 
 import { getAdminDb } from "./admin";
 
@@ -11,6 +19,74 @@ export interface LoadedUserProfile {
   handle: string;
   email: string | null;
   profile: EditableProfile;
+}
+
+function coerceImageOwner(raw: unknown): PublicGalleryImage | null {
+  if (!raw || typeof raw !== "object") return null;
+  const img = raw as Record<string, unknown>;
+  return typeof img.url === "string" && typeof img.path === "string"
+    ? { url: img.url, path: img.path }
+    : null;
+}
+
+function coerceVideoOwner(raw: unknown): PortfolioVideo | null {
+  if (!raw || typeof raw !== "object") return null;
+  const v = raw as Record<string, unknown>;
+  const url = typeof v.url === "string" ? v.url : "";
+  if (!url) return null;
+  const provider =
+    v.provider === "youtube" || v.provider === "vimeo" || v.provider === "direct"
+      ? (v.provider as VideoProvider)
+      : detectVideoProvider(url);
+  if (!provider) return null;
+  return { url, provider };
+}
+
+function coerceDetailOwner(raw: unknown): PortfolioDetail | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const images = Array.isArray(d.images)
+    ? (d.images as unknown[]).map(coerceImageOwner).filter((x): x is PublicGalleryImage => x !== null)
+    : [];
+  const videos = Array.isArray(d.videos)
+    ? (d.videos as unknown[]).map(coerceVideoOwner).filter((x): x is PortfolioVideo => x !== null)
+    : [];
+  return {
+    longDescription: typeof d.longDescription === "string" ? d.longDescription : "",
+    images: images.slice(0, 12),
+    videos: videos.slice(0, 6),
+  };
+}
+
+function coercePortfolioItemOwner(
+  raw: Record<string, unknown>,
+  index: number,
+): PublicPortfolioItem {
+  const title = (raw.title as string) ?? "";
+  const id =
+    typeof raw.id === "string" && raw.id
+      ? raw.id
+      : `legacy-${index}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 24)}`;
+  const createdAtRaw = raw.createdAt;
+  const createdAt =
+    typeof createdAtRaw === "string"
+      ? createdAtRaw
+      : createdAtRaw && typeof createdAtRaw === "object" &&
+          typeof (createdAtRaw as { toDate?: () => Date }).toDate === "function"
+        ? (createdAtRaw as { toDate: () => Date }).toDate().toISOString()
+        : null;
+  const hasDetailPage = raw.hasDetailPage === true;
+  const detail = hasDetailPage ? coerceDetailOwner(raw.detail) : null;
+  return {
+    id,
+    title,
+    description: (raw.description as string) ?? "",
+    link: (raw.link as string | null) ?? null,
+    image: coerceImageOwner(raw.image),
+    createdAt,
+    hasDetailPage,
+    detail,
+  };
 }
 
 /**
@@ -70,18 +146,7 @@ export async function loadOwnProfile(uid: string): Promise<LoadedUserProfile | n
       .filter((s) => s.name.length > 0),
     portfolio: rawPortfolio
       .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
-      .map((p) => {
-        const img = p.image as Record<string, unknown> | null | undefined;
-        return {
-          title: (p.title as string) ?? "",
-          description: (p.description as string) ?? "",
-          link: (p.link as string | null) ?? null,
-          image:
-            img && typeof img.url === "string" && typeof img.path === "string"
-              ? { url: img.url, path: img.path }
-              : null,
-        };
-      })
+      .map((p, i) => coercePortfolioItemOwner(p, i))
       .filter((p) => p.title.length > 0),
     gallery: rawGallery
       .filter((g): g is Record<string, unknown> => typeof g === "object" && g !== null)

@@ -72,6 +72,7 @@ export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
   "users",
   "verify",
   "welcome",
+  "work",
   "www",
 ]);
 

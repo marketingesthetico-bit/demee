@@ -8,11 +8,32 @@ export interface PublicService {
   unit: "project" | "hour" | "month" | null;
 }
 
+export type VideoProvider = "youtube" | "vimeo" | "direct";
+
+export interface PortfolioVideo {
+  url: string;
+  provider: VideoProvider;
+}
+
+export interface PortfolioDetail {
+  longDescription: string;
+  images: PublicGalleryImage[];
+  videos: PortfolioVideo[];
+}
+
 export interface PublicPortfolioItem {
+  /** Stable identifier — survives edits so deep-link URLs stay alive. */
+  id: string;
   title: string;
   description: string;
   link: string | null;
   image: PublicGalleryImage | null;
+  /** ISO timestamp of when the item was first added. Null for legacy rows. */
+  createdAt: string | null;
+  /** When true a /[handle]/work/[id] detail page is rendered for this item. */
+  hasDetailPage: boolean;
+  /** Detail-page payload. Null when hasDetailPage is false. */
+  detail: PortfolioDetail | null;
 }
 
 export interface PublicGalleryImage {

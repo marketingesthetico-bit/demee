@@ -44,10 +44,27 @@ const importedSchema = z
     portfolio: z
       .array(
         z.object({
+          id: z.string().min(1).max(60).optional(),
           title: z.string().min(1).max(120),
           description: z.string().max(280),
           link: z.string().url().optional(),
           image: imageRefSchema.optional(),
+          createdAt: z.string().datetime().optional(),
+          hasDetailPage: z.boolean().optional(),
+          detail: z
+            .object({
+              longDescription: z.string().max(6000),
+              images: z.array(imageRefSchema).max(12),
+              videos: z
+                .array(
+                  z.object({
+                    url: z.string().url().max(1000),
+                    provider: z.enum(["youtube", "vimeo", "direct"]),
+                  }),
+                )
+                .max(6),
+            })
+            .optional(),
         }),
       )
       .max(12)
@@ -180,7 +197,13 @@ export async function POST(req: Request) {
           skills: imported?.skills ?? [],
         },
         services: imported?.services ?? [],
-        portfolio: imported?.portfolio ?? [],
+        portfolio: (imported?.portfolio ?? []).map((item, i) => ({
+          ...item,
+          id: item.id ?? `p${Date.now().toString(36)}-${i}`,
+          createdAt: item.createdAt ?? new Date().toISOString(),
+          hasDetailPage: item.hasDetailPage ?? false,
+          detail: item.detail ?? null,
+        })),
         gallery: imported?.gallery ?? [],
         testimonials: [],
         faq: [],

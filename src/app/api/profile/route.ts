@@ -84,10 +84,28 @@ const patchSchema = z
     portfolio: z
       .array(
         z.object({
+          id: z.string().min(1).max(60),
           title: z.string().min(1).max(120),
           description: z.string().max(280),
           link: z.string().url().nullable().optional(),
           image: imageRefSchema.nullable().optional(),
+          createdAt: z.string().datetime().nullable().optional(),
+          hasDetailPage: z.boolean().optional(),
+          detail: z
+            .object({
+              longDescription: z.string().max(6000),
+              images: z.array(imageRefSchema).max(12),
+              videos: z
+                .array(
+                  z.object({
+                    url: z.string().url().max(1000),
+                    provider: z.enum(["youtube", "vimeo", "direct"]),
+                  }),
+                )
+                .max(6),
+            })
+            .nullable()
+            .optional(),
         }),
       )
       .max(12)
