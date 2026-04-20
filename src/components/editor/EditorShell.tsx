@@ -20,11 +20,8 @@ import { cn } from "@/lib/utils";
 
 import { AboutForm } from "./AboutForm";
 import { AestheticPicker } from "./AestheticPicker";
-import { BookingForm } from "./BookingForm";
-import { BudgetForm } from "./BudgetForm";
 import { ColorsForm } from "./ColorsForm";
 import { ContactForm } from "./ContactForm";
-import type { GoogleConnectionStatus } from "./GoogleCalendarConnect";
 import { HeaderForm } from "./HeaderForm";
 import { ImagesForm } from "./ImagesForm";
 import { PortfolioForm } from "./PortfolioForm";
@@ -43,9 +40,19 @@ const SAVE_DEBOUNCE_MS = 800;
 
 interface Props {
   initialProfile: EditableProfile;
-  initialBudget: BudgetConfig;
-  initialBooking: BookingConfig;
-  initialGoogleStatus: GoogleConnectionStatus;
+  /**
+   * Read-only snapshot of the budget module for preview purposes. The
+   * source of truth + the edit UI now live under /leads · Ajustes, so
+   * EditorShell never mutates this — it's only used so the live
+   * preview can show the "Solicitar presupuesto" affordance correctly.
+   */
+  budgetForPreview: BudgetConfig;
+  /**
+   * Same contract as budgetForPreview — the agenda edit surface moved
+   * to /bookings · Ajustes. Here we only need enough of the config to
+   * render the booking teaser inside the preview.
+   */
+  bookingForPreview: BookingConfig;
   handle: string;
 }
 
@@ -106,25 +113,18 @@ type ProfilePatch = Partial<{
 
 export function EditorShell({
   initialProfile,
-  initialBudget,
-  initialBooking,
-  initialGoogleStatus,
+  budgetForPreview,
+  bookingForPreview,
   handle,
 }: Props) {
   const [profile, setProfile] = useState<EditableProfile>(initialProfile);
-  const [budget, setBudget] = useState<BudgetConfig>(initialBudget);
-  const [booking, setBooking] = useState<BookingConfig>(initialBooking);
   const [status, setStatus] = useState<SaveStatus>({ kind: "clean" });
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
   // Desktop-only: lets the editor take the full column width. Mobile
   // still uses the tabs, unaffected by this flag.
   const [previewHidden, setPreviewHidden] = useState(false);
   const pendingPatch = useRef<ProfilePatch>({});
-  const pendingBudget = useRef<BudgetConfig | null>(null);
-  const pendingBooking = useRef<BookingConfig | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const budgetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const bookingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flushSave = useCallback(async () => {
     const patch = pendingPatch.current;
@@ -167,77 +167,9 @@ export function EditorShell({
     [flushSave],
   );
 
-  const flushBudgetSave = useCallback(async () => {
-    const next = pendingBudget.current;
-    if (!next) {
-      setStatus({ kind: "clean" });
-      return;
-    }
-    pendingBudget.current = null;
-    setStatus({ kind: "saving" });
-    try {
-      const res = await fetch("/api/budget", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
-      });
-      if (!res.ok) {
-        setStatus({ kind: "error", message: "No se pudo guardar el presupuesto." });
-        return;
-      }
-      setStatus({ kind: "saved", at: Date.now() });
-    } catch (err) {
-      console.error("[editor/budget] save failed", err);
-      setStatus({ kind: "error", message: "Error de red." });
-    }
-  }, []);
-
-  function updateBudget(next: BudgetConfig) {
-    setBudget(next);
-    pendingBudget.current = next;
-    setStatus({ kind: "dirty" });
-    if (budgetTimerRef.current) clearTimeout(budgetTimerRef.current);
-    budgetTimerRef.current = setTimeout(flushBudgetSave, SAVE_DEBOUNCE_MS);
-  }
-
-  const flushBookingSave = useCallback(async () => {
-    const next = pendingBooking.current;
-    if (!next) {
-      setStatus({ kind: "clean" });
-      return;
-    }
-    pendingBooking.current = null;
-    setStatus({ kind: "saving" });
-    try {
-      const res = await fetch("/api/booking", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
-      });
-      if (!res.ok) {
-        setStatus({ kind: "error", message: "No se pudo guardar la agenda." });
-        return;
-      }
-      setStatus({ kind: "saved", at: Date.now() });
-    } catch (err) {
-      console.error("[editor/booking] save failed", err);
-      setStatus({ kind: "error", message: "Error de red." });
-    }
-  }, []);
-
-  function updateBooking(next: BookingConfig) {
-    setBooking(next);
-    pendingBooking.current = next;
-    setStatus({ kind: "dirty" });
-    if (bookingTimerRef.current) clearTimeout(bookingTimerRef.current);
-    bookingTimerRef.current = setTimeout(flushBookingSave, SAVE_DEBOUNCE_MS);
-  }
-
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      if (budgetTimerRef.current) clearTimeout(budgetTimerRef.current);
-      if (bookingTimerRef.current) clearTimeout(bookingTimerRef.current);
     };
   }, []);
 
@@ -289,8 +221,8 @@ export function EditorShell({
   const preview = toPublicPreview(
     profile,
     handle,
-    budget.enabled && budget.items.length > 0,
-    booking,
+    budgetForPreview.enabled && budgetForPreview.items.length > 0,
+    bookingForPreview,
   );
 
   return (
@@ -379,26 +311,6 @@ export function EditorShell({
         </SectionCard>
 
         <SectionCard
-          title="Presupuestador"
-          subtitle="Vive en demee.app/tuhandle/budget cuando está activo."
-          defaultOpen={false}
-        >
-          <BudgetForm value={budget} onChange={updateBudget} />
-        </SectionCard>
-
-        <SectionCard
-          title="Agenda"
-          subtitle="Reserva de llamadas en demee.app/tuhandle/book cuando está activa."
-          defaultOpen={false}
-        >
-          <BookingForm
-            value={booking}
-            onChange={updateBooking}
-            googleStatus={initialGoogleStatus}
-          />
-        </SectionCard>
-
-        <SectionCard
           title="Estilo visual"
           subtitle="Cambia el tema base de tu página pública."
         >
@@ -433,6 +345,8 @@ export function EditorShell({
             onChange={updateDefaultSections}
           />
         </SectionCard>
+
+        <ModuleLinks />
       </section>
 
       {/*
@@ -547,6 +461,31 @@ function EditorHeader({
       </div>
       <StatusPill status={status} />
     </header>
+  );
+}
+
+/**
+ * Signposts the two module-specific config surfaces so visitors of
+ * /edit know where the budget and agenda settings live now. Keeping
+ * the entry-points visible in the form column is cheap insurance
+ * against "where did the budget settings go?" confusion after the
+ * move.
+ */
+function ModuleLinks() {
+  return (
+    <div className="rounded-lg border border-dashed border-ink/15 bg-white/50 p-4">
+      <p className="text-xs text-ink/60">
+        Los ajustes del{" "}
+        <a href="/leads" className="font-medium text-olive-700 hover:underline">
+          presupuestador
+        </a>{" "}
+        y de la{" "}
+        <a href="/bookings" className="font-medium text-olive-700 hover:underline">
+          agenda
+        </a>{" "}
+        viven dentro de sus secciones, en la pestaña <em>Ajustes</em>.
+      </p>
+    </div>
   );
 }
 

@@ -5,9 +5,9 @@ import { useMemo, useState } from "react";
 import type { CalculatedBudget } from "@/lib/budget/types";
 import { cn } from "@/lib/utils";
 
-type LeadStatus = "new" | "viewed" | "replied" | "closed";
+export type LeadStatus = "new" | "viewed" | "replied" | "closed";
 
-interface ClientLead {
+export interface ClientLead {
   id: string;
   handle: string;
   status: LeadStatus;
@@ -99,11 +99,8 @@ export function LeadsList({ initialLeads }: Props) {
           Todavía no te ha llegado ninguna solicitud.
         </p>
         <p className="mt-2 text-xs text-ink/50">
-          Activa el presupuestador en{" "}
-          <a href="/edit" className="text-olive-700 hover:underline">
-            /edit
-          </a>{" "}
-          y comparte tu página para recibir la primera.
+          Activa el presupuestador en la pestaña <em>Ajustes</em> y comparte tu
+          página para recibir la primera.
         </p>
       </div>
     );

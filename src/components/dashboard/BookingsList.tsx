@@ -86,11 +86,8 @@ export function BookingsList({ initialBookings }: { initialBookings: LoadedBooki
       <div className="rounded-lg border border-dashed border-ink/15 bg-white/50 px-6 py-16 text-center">
         <p className="text-sm text-ink/60">Todavía no tienes reservas.</p>
         <p className="mt-2 text-xs text-ink/50">
-          Activa la agenda desde{" "}
-          <a href="/edit" className="text-olive-700 hover:underline">
-            /edit
-          </a>{" "}
-          y comparte tu página para empezar a recibirlas.
+          Activa la agenda en la pestaña <em>Ajustes</em> y comparte tu página
+          para empezar a recibirlas.
         </p>
       </div>
     );
