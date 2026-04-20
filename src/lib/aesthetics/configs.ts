@@ -38,7 +38,7 @@ const BOLD_TOKENS: AestheticTokens = {
   spacingUnit: "1.3rem",
 };
 
-type SupportedAesthetic = Extract<Aesthetic, "minimal" | "editorial" | "bold">;
+export type SupportedAesthetic = Extract<Aesthetic, "minimal" | "editorial" | "bold">;
 
 export const AESTHETICS: Record<SupportedAesthetic, AestheticConfig> = {
   minimal: {

@@ -11,7 +11,17 @@ const CORE_SECTIONS = [
   "contact",
 ] as const;
 
-export const INDUSTRIES: Record<Extract<Industry, "graphic-designer" | "developer" | "ux-designer" | "photographer" | "copywriter" | "coach" | "marketing-consultant" | "architect">, IndustryConfig> = {
+export type SupportedIndustry =
+  | "graphic-designer"
+  | "developer"
+  | "ux-designer"
+  | "photographer"
+  | "copywriter"
+  | "coach"
+  | "marketing-consultant"
+  | "architect";
+
+export const INDUSTRIES: Record<SupportedIndustry, IndustryConfig> = {
   "graphic-designer": {
     slug: "graphic-designer",
     label: "Diseñador gráfico",
