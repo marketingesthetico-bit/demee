@@ -6,6 +6,7 @@ export type ProfileSectionKey =
   | "services"
   | "gallery"
   | "portfolio"
+  | "booking"
   | "testimonials"
   | "faq"
   | "contact";

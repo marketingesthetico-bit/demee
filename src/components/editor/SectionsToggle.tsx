@@ -9,6 +9,7 @@ const TOGGLEABLE: { key: ProfileSectionKey; label: string; hint: string }[] = [
   { key: "services", label: "Servicios", hint: "Lista de servicios con precio" },
   { key: "gallery", label: "Galería", hint: "Imágenes de tu trabajo" },
   { key: "portfolio", label: "Portfolio", hint: "Proyectos con título, descripción y enlace" },
+  { key: "booking", label: "Agenda", hint: "Teaser con CTA a /book cuando la agenda está activa" },
   { key: "contact", label: "Contacto", hint: "Email y redes" },
 ];
 

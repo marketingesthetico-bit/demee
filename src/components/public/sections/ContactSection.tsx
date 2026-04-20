@@ -16,17 +16,24 @@ export function ContactSection({ profile }: { profile: PublicProfile }) {
       typeof entry[1] === "string" && entry[1].length > 0,
   );
 
-  if (!profile.contact.email && socialEntries.length === 0 && !profile.hasBudget) return null;
+  const hasAnyContact =
+    Boolean(profile.contact.email) ||
+    socialEntries.length > 0 ||
+    profile.hasBudget ||
+    profile.hasBooking;
+  if (!hasAnyContact) return null;
+
+  const subtitle = profile.hasBudget
+    ? "Pide presupuesto y te respondo con una estimación al momento."
+    : profile.hasBooking
+      ? "Agenda una llamada rápida y lo vemos."
+      : "Escríbeme y te respondo pronto.";
 
   return (
     <section className="flex flex-col gap-4 rounded-aesthetic-base border border-aesthetic-fg/15 p-6 sm:flex-row sm:items-center sm:justify-between">
       <div className="space-y-1">
         <h2 className="font-aesthetic-display text-xl">Hablemos</h2>
-        <p className="text-sm text-aesthetic-muted">
-          {profile.hasBudget
-            ? "Pide presupuesto y te respondo con una estimación al momento."
-            : "Escríbeme y te respondo pronto."}
-        </p>
+        <p className="text-sm text-aesthetic-muted">{subtitle}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {socialEntries.map(([key, url]) => (
@@ -46,6 +53,14 @@ export function ContactSection({ profile }: { profile: PublicProfile }) {
             className="rounded-aesthetic-base border border-aesthetic-fg/15 px-3 py-1.5 text-sm text-aesthetic-fg/80 hover:border-aesthetic-accent hover:text-aesthetic-accent"
           >
             Email
+          </a>
+        )}
+        {profile.hasBooking && (
+          <a
+            href={`/${profile.handle}/book`}
+            className="rounded-aesthetic-base border border-aesthetic-fg/15 px-3 py-1.5 text-sm text-aesthetic-fg/80 hover:border-aesthetic-accent hover:text-aesthetic-accent"
+          >
+            Agendar
           </a>
         )}
         {profile.hasBudget && (

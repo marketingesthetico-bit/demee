@@ -53,12 +53,23 @@ export async function getPublicProfileByHandle(handle: string): Promise<PublicPr
   );
   const bookingData = bookingSnap.exists ? bookingSnap.data() : undefined;
   const hasBooking = Boolean(bookingData?.enabled === true);
+  const bookingTeaser = hasBooking && bookingData
+    ? {
+        name: (bookingData.name as string) ?? "Llamada",
+        description: (bookingData.description as string) ?? "",
+        durationMinutes: (bookingData.durationMinutes as number) ?? 30,
+        locationType:
+          (bookingData.locationType as "online" | "phone" | "in-person" | undefined) ??
+          "online",
+      }
+    : null;
 
   return {
     uid,
     handle,
     hasBudget,
     hasBooking,
+    bookingTeaser,
     industry: (data.industry as Industry | undefined) ?? "other",
     aesthetic: (data.aesthetic as Aesthetic | undefined) ?? "minimal",
     defaultSections:

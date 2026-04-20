@@ -49,6 +49,18 @@ export interface PublicProfile {
   contact: { email: string | null; social: PublicSocial };
   hasBudget: boolean;
   hasBooking: boolean;
+  /**
+   * Minimal booking snapshot for rendering the agenda teaser on /[handle]
+   * without re-querying. Null when hasBooking is false.
+   */
+  bookingTeaser: PublicBookingTeaser | null;
+}
+
+export interface PublicBookingTeaser {
+  name: string;
+  description: string;
+  durationMinutes: number;
+  locationType: "online" | "phone" | "in-person";
 }
 
 export const EMPTY_PUBLIC_SOCIAL: PublicSocial = {

@@ -53,13 +53,22 @@ function toPublicPreview(
   profile: EditableProfile,
   handle: string,
   hasBudget: boolean,
-  hasBooking: boolean,
+  booking: BookingConfig,
 ): PublicProfile {
+  const hasBooking = booking.enabled;
   return {
     uid: "preview",
     handle,
     hasBudget,
     hasBooking,
+    bookingTeaser: hasBooking
+      ? {
+          name: booking.name,
+          description: booking.description,
+          durationMinutes: booking.durationMinutes,
+          locationType: booking.locationType,
+        }
+      : null,
     industry: profile.industry,
     aesthetic: profile.aesthetic,
     defaultSections: profile.defaultSections,
@@ -266,7 +275,7 @@ export function EditorShell({
     profile,
     handle,
     budget.enabled && budget.items.length > 0,
-    booking.enabled,
+    booking,
   );
 
   return (
