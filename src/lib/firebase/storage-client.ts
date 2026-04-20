@@ -75,6 +75,10 @@ export async function uploadUserImage({
   validate(file);
 
   const auth = getFirebaseAuth();
+  // Wait for the client SDK to rehydrate auth state from IndexedDB —
+  // on a fresh page load currentUser is null until this settles, even
+  // for a user who has a valid session cookie.
+  await auth.authStateReady();
   const uid = auth.currentUser?.uid;
   if (!uid) {
     throw new ImageUploadError("not-authenticated");
@@ -103,6 +107,7 @@ export async function uploadUserImage({
 
 export async function deleteUserImage(path: string): Promise<void> {
   const auth = getFirebaseAuth();
+  await auth.authStateReady();
   if (!auth.currentUser) return;
   try {
     await deleteObject(ref(getFirebaseStorage(), path));
