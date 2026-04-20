@@ -7,15 +7,18 @@ import type {
 } from "./types";
 
 /**
- * Pure budget calculator. Given a config + a list of selections,
- * returns each selected line with multiplier applied plus the total.
- * Deterministic — same inputs always produce the same output. No I/O.
+ * Pure budget calculator. Given a config + the visitor's explicit
+ * selections, returns each selected line with multiplier applied plus
+ * the total. Deterministic — same inputs always produce the same output.
+ * No I/O.
  *
- * Non-obvious rules:
- * - Items marked `defaultSelected: true` are included even if the
- *   caller didn't pass them, unless they're also in the selections with
- *   an explicit empty marker (we don't have negative selections; this
- *   matches the "opt-out not supported" UX of a checkbox list).
+ * Contract:
+ * - `selections` is the authoritative list of what the visitor picked.
+ *   `defaultSelected: true` on a BudgetItem is only a hint to the UI for
+ *   the INITIAL state of the checkbox; the caller is responsible for
+ *   seeding its initial selections from it. Once the visitor interacts,
+ *   their explicit state wins — deselecting a default-selected item
+ *   must remove it from the total.
  * - Selections referring to deleted items are silently dropped.
  * - Unknown optionIds fall back to the item's first option, or to the
  *   base price (multiplier 1) if the item has no options at all.
@@ -29,24 +32,21 @@ export function calculateBudget(
   const itemsById = new Map<string, BudgetItem>();
   for (const item of config.items) itemsById.set(item.id, item);
 
-  const selectionByItemId = new Map<string, BudgetSelection>();
-  for (const sel of selections) selectionByItemId.set(sel.itemId, sel);
-
-  // Start with the union of selected items + defaultSelected items.
-  const activeItemIds = new Set<string>();
-  for (const item of config.items) {
-    if (item.defaultSelected) activeItemIds.add(item.id);
-  }
+  // Preserve the visitor's order of selection (de-duping by itemId so a
+  // repeated selection doesn't render twice).
+  const seen = new Set<string>();
+  const activeSelections: BudgetSelection[] = [];
   for (const sel of selections) {
-    if (itemsById.has(sel.itemId)) activeItemIds.add(sel.itemId);
+    if (seen.has(sel.itemId)) continue;
+    if (!itemsById.has(sel.itemId)) continue; // drop selections for deleted items
+    seen.add(sel.itemId);
+    activeSelections.push(sel);
   }
 
   const lines: CalculatedLineItem[] = [];
-  for (const itemId of activeItemIds) {
-    const item = itemsById.get(itemId);
-    if (!item) continue;
+  for (const sel of activeSelections) {
+    const item = itemsById.get(sel.itemId)!;
 
-    const chosenSelection = selectionByItemId.get(itemId);
     let optionId: string | null = null;
     let optionLabel: string | null = null;
     let multiplier = 1;
@@ -54,8 +54,8 @@ export function calculateBudget(
     if (item.options.length > 0) {
       const firstOption = item.options[0]!;
       const fromSelection =
-        chosenSelection?.optionId != null
-          ? item.options.find((o) => o.id === chosenSelection.optionId)
+        sel.optionId != null
+          ? item.options.find((o) => o.id === sel.optionId)
           : undefined;
       const chosen = fromSelection ?? firstOption;
       optionId = chosen.id;

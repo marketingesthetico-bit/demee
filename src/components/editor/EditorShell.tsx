@@ -116,6 +116,9 @@ export function EditorShell({
   const [booking, setBooking] = useState<BookingConfig>(initialBooking);
   const [status, setStatus] = useState<SaveStatus>({ kind: "clean" });
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
+  // Desktop-only: lets the editor take the full column width. Mobile
+  // still uses the tabs, unaffected by this flag.
+  const [previewHidden, setPreviewHidden] = useState(false);
   const pendingPatch = useRef<ProfilePatch>({});
   const pendingBudget = useRef<BudgetConfig | null>(null);
   const pendingBooking = useRef<BookingConfig | null>(null);
@@ -312,11 +315,22 @@ export function EditorShell({
 
       <section
         className={cn(
-          "w-full space-y-4 p-6 lg:w-[480px] lg:shrink-0 lg:overflow-y-auto",
+          "w-full space-y-4 p-6 lg:overflow-y-auto",
+          // Split layout (default): edit column is 480px wide.
+          !previewHidden && "lg:w-[480px] lg:shrink-0",
+          // Preview hidden: edit column fills the whole viewport, but
+          // capped + centered so very wide monitors don't make forms 1500px wide.
+          previewHidden && "lg:mx-auto lg:w-full lg:max-w-3xl",
+          // Mobile: hide the edit column when the preview tab is active.
           mobileTab === "preview" ? "hidden lg:block" : "",
         )}
       >
-        <EditorHeader status={status} handle={handle} />
+        <EditorHeader
+          status={status}
+          handle={handle}
+          previewHidden={previewHidden}
+          onTogglePreview={() => setPreviewHidden((v) => !v)}
+        />
 
         <SectionCard
           title="Presentación"
@@ -417,7 +431,10 @@ export function EditorShell({
       <section
         className={cn(
           "flex-1 border-t border-ink/10 lg:border-l lg:border-t-0",
+          // Mobile: hide when the edit tab is selected.
           mobileTab === "edit" ? "hidden lg:block" : "",
+          // Desktop: fully hidden when the user toggled the preview off.
+          previewHidden && "lg:hidden",
         )}
       >
         <div className="sticky top-0 z-10 flex h-12 items-center justify-between border-b border-ink/10 bg-white/80 px-5 text-xs text-ink/60 backdrop-blur">
@@ -463,7 +480,17 @@ function MobileTab({
   );
 }
 
-function EditorHeader({ status, handle }: { status: SaveStatus; handle: string }) {
+function EditorHeader({
+  status,
+  handle,
+  previewHidden,
+  onTogglePreview,
+}: {
+  status: SaveStatus;
+  handle: string;
+  previewHidden: boolean;
+  onTogglePreview: () => void;
+}) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-2 pb-2">
       <div>
@@ -480,7 +507,25 @@ function EditorHeader({ status, handle }: { status: SaveStatus; handle: string }
           </a>
         </p>
       </div>
-      <StatusPill status={status} />
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onTogglePreview}
+          aria-pressed={!previewHidden}
+          title={
+            previewHidden
+              ? "Mostrar la vista previa en vivo"
+              : "Ocultar la vista previa para tener más espacio"
+          }
+          className={cn(
+            "hidden items-center gap-1.5 rounded-md border border-ink/15 bg-white px-2.5 py-1.5 text-xs text-ink/70 transition hover:border-ink/30 hover:text-ink lg:inline-flex",
+          )}
+        >
+          <span aria-hidden="true">{previewHidden ? "👁" : "⤢"}</span>
+          {previewHidden ? "Mostrar preview" : "Ocultar preview"}
+        </button>
+        <StatusPill status={status} />
+      </div>
     </header>
   );
 }

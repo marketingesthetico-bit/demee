@@ -14,12 +14,16 @@ function config(overrides: Partial<BudgetConfig> = {}): BudgetConfig {
 }
 
 describe("calculateBudget", () => {
-  it("returns an empty budget when no items match", () => {
+  it("returns an empty budget when no selections", () => {
     const result = calculateBudget(config(), []);
     expect(result).toEqual({ lines: [], total: 0, currency: "EUR" });
   });
 
-  it("includes defaultSelected items even without explicit selection", () => {
+  it("empty selections = empty total even if some items are defaultSelected", () => {
+    // Regression test. Previously the calculator was auto-including any
+    // defaultSelected item regardless of the visitor's explicit choice,
+    // so unchecking a pre-selected checkbox left the total stuck at the
+    // original value.
     const cfg = config({
       items: [
         {
@@ -35,8 +39,41 @@ describe("calculateBudget", () => {
       ],
     });
     const result = calculateBudget(cfg, []);
-    expect(result.lines).toHaveLength(1);
-    expect(result.total).toBe(1200);
+    expect(result.lines).toHaveLength(0);
+    expect(result.total).toBe(0);
+  });
+
+  it("includes an item iff it's in the selections (regardless of defaultSelected)", () => {
+    const cfg = config({
+      items: [
+        {
+          id: "brand",
+          name: "Identidad",
+          description: "",
+          basePrice: 1200,
+          unit: "project",
+          selectable: true,
+          defaultSelected: true,
+          options: [],
+        },
+        {
+          id: "web",
+          name: "Web",
+          description: "",
+          basePrice: 800,
+          unit: "project",
+          selectable: true,
+          defaultSelected: false,
+          options: [],
+        },
+      ],
+    });
+    const result = calculateBudget(cfg, [
+      // Picks "web" (not defaultSelected), drops "brand" (defaultSelected).
+      { itemId: "web", optionId: null },
+    ]);
+    expect(result.lines.map((l) => l.itemId)).toEqual(["web"]);
+    expect(result.total).toBe(800);
   });
 
   it("applies the multiplier from the chosen option", () => {
@@ -110,6 +147,29 @@ describe("calculateBudget", () => {
     expect(result.total).toBe(500);
   });
 
+  it("drops duplicate selections (first one wins)", () => {
+    const cfg = config({
+      items: [
+        {
+          id: "a",
+          name: "A",
+          description: "",
+          basePrice: 100,
+          unit: "project",
+          selectable: true,
+          defaultSelected: false,
+          options: [],
+        },
+      ],
+    });
+    const result = calculateBudget(cfg, [
+      { itemId: "a", optionId: null },
+      { itemId: "a", optionId: null },
+    ]);
+    expect(result.lines).toHaveLength(1);
+    expect(result.total).toBe(100);
+  });
+
   it("floors negative prices and multipliers at zero", () => {
     const cfg = config({
       items: [
@@ -120,12 +180,12 @@ describe("calculateBudget", () => {
           basePrice: -50,
           unit: "project",
           selectable: true,
-          defaultSelected: true,
+          defaultSelected: false,
           options: [{ id: "x", label: "X", multiplier: -3 }],
         },
       ],
     });
-    const result = calculateBudget(cfg, []);
+    const result = calculateBudget(cfg, [{ itemId: "weird", optionId: "x" }]);
     expect(result.lines[0]?.total).toBe(0);
     expect(result.total).toBe(0);
   });
@@ -140,7 +200,7 @@ describe("calculateBudget", () => {
           basePrice: 33.33,
           unit: "project",
           selectable: true,
-          defaultSelected: true,
+          defaultSelected: false,
           options: [],
         },
         {
@@ -155,13 +215,16 @@ describe("calculateBudget", () => {
         },
       ],
     });
-    const result = calculateBudget(cfg, [{ itemId: "b", optionId: "x" }]);
+    const result = calculateBudget(cfg, [
+      { itemId: "a", optionId: null },
+      { itemId: "b", optionId: "x" },
+    ]);
     expect(result.lines[0]?.total).toBe(33.33);
     expect(result.lines[1]?.total).toBe(11);
     expect(result.total).toBe(44.33);
   });
 
-  it("includes explicit selections even when not defaultSelected", () => {
+  it("preserves selection order in the output lines", () => {
     const cfg = config({
       items: [
         {
@@ -186,8 +249,10 @@ describe("calculateBudget", () => {
         },
       ],
     });
-    const result = calculateBudget(cfg, [{ itemId: "b", optionId: null }]);
-    expect(result.lines.map((l) => l.itemId)).toEqual(["b"]);
-    expect(result.total).toBe(200);
+    const result = calculateBudget(cfg, [
+      { itemId: "b", optionId: null },
+      { itemId: "a", optionId: null },
+    ]);
+    expect(result.lines.map((l) => l.itemId)).toEqual(["b", "a"]);
   });
 });
