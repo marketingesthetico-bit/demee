@@ -2,7 +2,7 @@ import { getIndustryConfig, type SupportedIndustry } from "@/lib/industries";
 import type { SupportedAesthetic } from "@/lib/aesthetics";
 import type { OnboardingDraft } from "@/lib/onboarding/draft";
 
-import { EMPTY_PUBLIC_SOCIAL, type PublicProfile } from "./public";
+import { EMPTY_PUBLIC_SOCIAL, type PublicGalleryImage, type PublicProfile } from "./public";
 
 interface BuildPreviewParams {
   draft: OnboardingDraft;
@@ -36,6 +36,11 @@ export function buildPreviewProfile(params: BuildPreviewParams): PublicProfile |
     }
   }
 
+  const gallery: PublicGalleryImage[] = (imported.gallery ?? []).map((g) => ({
+    url: g.url,
+    path: g.path,
+  }));
+
   return {
     uid: "preview",
     handle: params.handle || "tunombre",
@@ -47,7 +52,7 @@ export function buildPreviewProfile(params: BuildPreviewParams): PublicProfile |
       headline,
       location: null,
       availability: "available",
-      photoURL: params.photoURL,
+      photoURL: imported.avatar?.url ?? params.photoURL,
     },
     about: {
       bio: imported.bio ?? "",
@@ -64,6 +69,7 @@ export function buildPreviewProfile(params: BuildPreviewParams): PublicProfile |
       description: p.description,
       link: p.link ?? null,
     })),
+    gallery,
     contact: {
       email: params.email,
       social,

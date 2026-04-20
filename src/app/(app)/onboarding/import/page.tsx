@@ -3,11 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { AvatarUpload } from "@/components/onboarding/AvatarUpload";
+import { GalleryUpload } from "@/components/onboarding/GalleryUpload";
 import { getIndustryConfig } from "@/lib/industries";
 import type { SupportedIndustry } from "@/lib/industries";
 import {
   readDraft,
   writeDraft,
+  type GalleryImage,
   type ImportedProfile,
 } from "@/lib/onboarding/draft";
 import { cn } from "@/lib/utils";
@@ -79,6 +82,8 @@ export default function ImportStepPage() {
   const [servicesPreview, setServicesPreview] = useState<ImportedProfile["services"]>(undefined);
   const [portfolioPreview, setPortfolioPreview] = useState<ImportedProfile["portfolio"]>(undefined);
   const [socialPreview, setSocialPreview] = useState<ImportedProfile["social"]>(undefined);
+  const [avatar, setAvatar] = useState<GalleryImage | null>(null);
+  const [gallery, setGallery] = useState<GalleryImage[]>([]);
   const [status, setStatus] = useState<ImportStatus>({ kind: "idle" });
 
   useEffect(() => {
@@ -96,6 +101,8 @@ export default function ImportStepPage() {
     setServicesPreview(draft.imported?.services);
     setPortfolioPreview(draft.imported?.portfolio);
     setSocialPreview(draft.imported?.social);
+    setAvatar(draft.imported?.avatar ?? null);
+    setGallery(draft.imported?.gallery ?? []);
   }, [router]);
 
   const skills = useMemo(
@@ -116,8 +123,10 @@ export default function ImportStepPage() {
       services: servicesPreview,
       portfolio: portfolioPreview,
       social: socialPreview,
+      avatar: avatar ?? undefined,
+      gallery: gallery.length > 0 ? gallery : undefined,
     }),
-    [headline, bio, skills, servicesPreview, portfolioPreview, socialPreview],
+    [headline, bio, skills, servicesPreview, portfolioPreview, socialPreview, avatar, gallery],
   );
 
   function applyImported(imp: ImportedProfile, sources: SourceReport[], polished: boolean) {
@@ -368,6 +377,28 @@ export default function ImportStepPage() {
             {status.sources && <SourceList sources={status.sources} />}
           </div>
         )}
+      </section>
+
+      <section className="space-y-6 rounded-lg border border-ink/10 bg-white p-6">
+        <div className="space-y-1">
+          <h2 className="font-medium text-ink">Imágenes</h2>
+          <p className="text-xs text-ink/60">
+            Tu foto y algunas imágenes de tu trabajo. La página pública las adapta al estilo que
+            elegiste para causar la mejor impresión.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-ink">Foto tuya</label>
+          <AvatarUpload value={avatar} onChange={setAvatar} />
+        </div>
+
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-ink">
+            Imágenes de tu trabajo <span className="font-normal text-ink/50">(hasta 6)</span>
+          </label>
+          <GalleryUpload value={gallery} onChange={setGallery} max={6} />
+        </div>
       </section>
 
       <section className="space-y-6 rounded-lg border border-ink/10 bg-white p-6">

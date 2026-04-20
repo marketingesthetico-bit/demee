@@ -14,6 +14,11 @@ export interface PublicPortfolioItem {
   link: string | null;
 }
 
+export interface PublicGalleryImage {
+  url: string;
+  path: string;
+}
+
 export interface PublicSocial {
   linkedin: string | null;
   twitter: string | null;
@@ -40,6 +45,7 @@ export interface PublicProfile {
   about: { bio: string; skills: string[] };
   services: PublicService[];
   portfolio: PublicPortfolioItem[];
+  gallery: PublicGalleryImage[];
   contact: { email: string | null; social: PublicSocial };
 }
 

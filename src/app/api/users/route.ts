@@ -22,6 +22,11 @@ const industrySchema = z.enum([
 ]);
 const aestheticSchema = z.enum(["minimal", "editorial", "bold"]);
 
+const imageRefSchema = z.object({
+  url: z.string().url().max(1000),
+  path: z.string().min(1).max(500),
+});
+
 const importedSchema = z
   .object({
     headline: z.string().max(200).optional(),
@@ -57,6 +62,8 @@ const importedSchema = z
         website: z.string().max(200).optional(),
       })
       .optional(),
+    avatar: imageRefSchema.optional(),
+    gallery: z.array(imageRefSchema).max(8).optional(),
   })
   .optional();
 
@@ -164,7 +171,8 @@ export async function POST(req: Request) {
           headline: imported?.headline ?? industryConfig.examples.headline,
           location: null,
           availability: "available",
-          photoURL: session.picture ?? null,
+          photoURL: imported?.avatar?.url ?? session.picture ?? null,
+          photoPath: imported?.avatar?.path ?? null,
         },
         about: {
           bio: imported?.bio ?? "",
@@ -172,6 +180,7 @@ export async function POST(req: Request) {
         },
         services: imported?.services ?? [],
         portfolio: imported?.portfolio ?? [],
+        gallery: imported?.gallery ?? [],
         testimonials: [],
         faq: [],
         contact: {

@@ -11,6 +11,7 @@ export type {
   PublicService,
   PublicPortfolioItem,
   PublicSocial,
+  PublicGalleryImage,
 } from "@/lib/profile/public";
 
 const FALLBACK_SECTIONS: ProfileSectionKey[] = [
@@ -37,6 +38,7 @@ export async function getPublicProfileByHandle(handle: string): Promise<PublicPr
 
   const rawServices = (data.services as unknown[] | undefined) ?? [];
   const rawPortfolio = (data.portfolio as unknown[] | undefined) ?? [];
+  const rawGallery = (data.gallery as unknown[] | undefined) ?? [];
   const rawSocial = (data.contact?.social as Record<string, unknown> | undefined) ?? {};
 
   return {
@@ -75,6 +77,14 @@ export async function getPublicProfileByHandle(handle: string): Promise<PublicPr
         link: (p.link as string | null) ?? null,
       }))
       .filter((p) => p.title.length > 0),
+    gallery: rawGallery
+      .filter((g): g is Record<string, unknown> => typeof g === "object" && g !== null)
+      .map((g) => ({
+        url: (g.url as string) ?? "",
+        path: (g.path as string) ?? "",
+      }))
+      .filter((g) => g.url.length > 0)
+      .slice(0, 8),
     contact: {
       email: (data.contact?.email as string | null) ?? null,
       social: {

@@ -3,6 +3,7 @@ import type { ProfileSectionKey } from "@/lib/industries";
 
 import { AboutSection } from "./sections/AboutSection";
 import { ContactSection } from "./sections/ContactSection";
+import { GallerySection } from "./sections/GallerySection";
 import { PortfolioSection } from "./sections/PortfolioSection";
 import { PublicHeader } from "./sections/PublicHeader";
 import { ServicesSection } from "./sections/ServicesSection";
@@ -13,6 +14,7 @@ const RENDERERS: Partial<Record<ProfileSectionKey, SectionRenderer>> = {
   header: (profile) => <PublicHeader profile={profile} />,
   about: (profile) => <AboutSection profile={profile} />,
   services: (profile) => <ServicesSection profile={profile} />,
+  gallery: (profile) => <GallerySection profile={profile} />,
   portfolio: (profile) => <PortfolioSection profile={profile} />,
   contact: (profile) => <ContactSection profile={profile} />,
 };
@@ -29,6 +31,13 @@ export function PublicPageBody({ profile }: { profile: PublicProfile }) {
     if (key === "header") continue;
     if (!rendered.has(key)) orderedKeys.push(key);
     rendered.add(key);
+  }
+  // Inject a gallery slot after "about" when the profile has images
+  // and the industry config didn't declare one explicitly.
+  if (profile.gallery.length > 0 && !rendered.has("gallery")) {
+    const aboutIdx = orderedKeys.indexOf("about");
+    const insertAt = aboutIdx >= 0 ? aboutIdx + 1 : 1;
+    orderedKeys.splice(insertAt, 0, "gallery");
   }
 
   return (

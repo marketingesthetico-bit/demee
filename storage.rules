@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Profile images live under /users/{uid}/... and are publicly readable
+    // so the /[handle] page can render them. Only the owner writes, and
+    // only common image mime-types + ≤ 5 MB are accepted.
+    match /users/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write:
+        if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Deny-by-default for anything else.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

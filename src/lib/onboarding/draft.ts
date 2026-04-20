@@ -4,6 +4,13 @@ import { z } from "zod";
 
 const DRAFT_KEY = "demee:onboarding-draft";
 
+export const galleryImageSchema = z.object({
+  url: z.string().url(),
+  path: z.string(),
+});
+
+export type GalleryImage = z.infer<typeof galleryImageSchema>;
+
 export const importedProfileSchema = z.object({
   headline: z.string().optional(),
   bio: z.string().optional(),
@@ -31,6 +38,8 @@ export const importedProfileSchema = z.object({
       website: z.string().optional(),
     })
     .optional(),
+  avatar: galleryImageSchema.optional(),
+  gallery: z.array(galleryImageSchema).max(8).optional(),
 });
 
 export type ImportedProfile = z.infer<typeof importedProfileSchema>;

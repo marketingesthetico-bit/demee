@@ -4,6 +4,7 @@ export type ProfileSectionKey =
   | "header"
   | "about"
   | "services"
+  | "gallery"
   | "portfolio"
   | "testimonials"
   | "faq"
