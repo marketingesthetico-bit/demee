@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import type { PublicProfile } from "@/lib/firebase/public-profile";
+import type { PublicProfile } from "@/lib/profile/public";
 
 const AVAILABILITY_COPY: Record<
   PublicProfile["header"]["availability"],

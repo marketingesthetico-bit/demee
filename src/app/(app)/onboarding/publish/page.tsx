@@ -3,9 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { PublicPageBody } from "@/components/public/PublicPageBody";
+import { ThemeProvider } from "@/components/public/ThemeProvider";
 import { getAestheticConfig } from "@/lib/aesthetics";
 import { getIndustryConfig } from "@/lib/industries";
 import { clearDraft, readDraft, writeDraft, type OnboardingDraft } from "@/lib/onboarding/draft";
+import { buildPreviewProfile } from "@/lib/profile/preview";
 import { cn } from "@/lib/utils";
 
 type HandleState =
@@ -89,6 +92,20 @@ export default function PublishStepPage() {
   const industryConfig = draft?.industry ? getIndustryConfig(draft.industry) : null;
   const aestheticConfig = draft?.aesthetic ? getAestheticConfig(draft.aesthetic) : null;
 
+  const previewProfile = useMemo(
+    () =>
+      draft
+        ? buildPreviewProfile({
+            draft,
+            name: name.trim(),
+            handle: trimmedHandle,
+            email: null,
+            photoURL: null,
+          })
+        : null,
+    [draft, name, trimmedHandle],
+  );
+
   const canSubmit = useMemo(
     () => handleState.status === "available" && name.trim().length > 0 && !submitting,
     [handleState, name, submitting],
@@ -144,25 +161,27 @@ export default function PublishStepPage() {
       <header className="space-y-3">
         <h1 className="font-display text-4xl text-ink">Último paso: tu URL.</h1>
         <p className="text-ink/70">
-          Reservamos tu handle y publicamos tu página. Podrás editar todo después.
+          Esta es la vista previa con el estilo <strong>{aestheticConfig.label}</strong>. Reservamos
+          tu handle y la publicamos.
         </p>
       </header>
 
-      <section className="space-y-4 rounded-lg border border-ink/10 bg-white p-6">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-ink/50">Elecciones</h2>
-        <dl className="grid grid-cols-2 gap-4 text-sm">
-          <div className="space-y-1">
-            <dt className="text-ink/50">Industria</dt>
-            <dd className="font-medium text-ink">
-              {industryConfig.emoji} {industryConfig.label}
-            </dd>
+      {previewProfile && (
+        <section className="overflow-hidden rounded-lg border border-ink/10 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-ink/10 bg-paper px-4 py-2 text-xs">
+            <span className="font-mono text-ink/60">demee.app/{previewProfile.handle}</span>
+            <span className="text-ink/50">Vista previa</span>
           </div>
-          <div className="space-y-1">
-            <dt className="text-ink/50">Estilo</dt>
-            <dd className="font-medium text-ink">{aestheticConfig.label}</dd>
-          </div>
-        </dl>
-      </section>
+          <ThemeProvider
+            aesthetic={previewProfile.aesthetic}
+            className="bg-aesthetic-bg font-aesthetic-body text-aesthetic-fg"
+          >
+            <div className="mx-auto max-w-2xl px-6 py-10 text-sm sm:px-8">
+              <PublicPageBody profile={previewProfile} />
+            </div>
+          </ThemeProvider>
+        </section>
+      )}
 
       <div className="space-y-6 rounded-lg border border-ink/10 bg-white p-6">
         <label className="block space-y-2">
