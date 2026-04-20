@@ -6,6 +6,7 @@ import { StickyContactBar } from "@/components/public/StickyContactBar";
 import { ThemeProvider } from "@/components/public/ThemeProvider";
 import { validateHandleFormat } from "@/lib/constants/reserved-handles";
 import { getPublicProfileByHandle } from "@/lib/firebase/public-profile";
+import { cn } from "@/lib/utils";
 
 export const revalidate = 60;
 
@@ -53,7 +54,20 @@ export default async function PublicHandlePage({ params }: Params) {
       overrides={profile.themeColors}
       className="min-h-screen bg-aesthetic-bg font-aesthetic-body text-aesthetic-fg"
     >
-      <main className="container max-w-3xl py-16 pb-32 sm:py-24 lg:pb-24">
+      {/*
+        Layout breakpoints:
+        - Mobile / tablet: centered, readable column (max-w-3xl).
+        - lg+ (≥1024): left-aligned with a clamped left margin that grows with
+          the viewport (1.5rem → 6vw → 6rem), and a right reserve of 300px for
+          the vertical sticky bar. Content is capped at max-w-5xl so very wide
+          monitors don't turn lines into essays.
+      */}
+      <main
+        className={cn(
+          "mx-auto max-w-3xl px-6 py-16 pb-32 sm:px-8 sm:py-24",
+          "lg:mx-0 lg:ml-[clamp(1.5rem,6vw,6rem)] lg:mr-[300px] lg:max-w-5xl lg:pb-24",
+        )}
+      >
         <PublicPageBody profile={profile} />
       </main>
       <StickyContactBar profile={profile} />
