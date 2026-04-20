@@ -303,7 +303,7 @@ export function EditorShell({
         // to 1fr — same net motion as pulling a drawer shut from the
         // right. The two states must share the same number of tracks
         // (2) so the browser can interpolate them smoothly.
-        "lg:transition-[grid-template-columns] lg:duration-300 lg:ease-out",
+        "lg:transition-[grid-template-columns] lg:duration-500 lg:ease-[cubic-bezier(0.22,1,0.36,1)]",
         previewHidden
           ? "lg:grid-cols-[1fr_0fr]"
           : "lg:grid-cols-[480px_1fr]",
@@ -454,12 +454,10 @@ export function EditorShell({
             ? "Mostrar la vista previa en vivo"
             : "Ocultar la vista previa para tener más espacio"
         }
-        className="absolute top-1/2 z-30 hidden h-20 w-7 items-center justify-center rounded-l-md border border-r-0 border-ink/15 bg-white text-ink/60 shadow-[-2px_0_8px_rgba(0,0,0,0.06)] transition-[left,transform,color,background-color,border-color] duration-300 ease-out hover:border-ink/30 hover:bg-ink/5 hover:text-ink lg:flex"
+        className="absolute top-4 z-30 hidden h-16 w-7 items-center justify-center rounded-l-md border border-r-0 border-ink/15 bg-white text-ink/60 shadow-[-2px_0_8px_rgba(0,0,0,0.06)] transition-[left,transform,color,background-color,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-ink/30 hover:bg-ink/5 hover:text-ink lg:flex"
         style={{
           left: previewHidden ? "100%" : "480px",
-          transform: previewHidden
-            ? "translate(-100%, -50%)"
-            : "translate(0, -50%)",
+          transform: previewHidden ? "translateX(-100%)" : "translateX(0)",
         }}
       >
         <span aria-hidden="true" className="text-sm leading-none">
