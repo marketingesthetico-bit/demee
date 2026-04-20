@@ -71,6 +71,7 @@ export function buildPreviewProfile(params: BuildPreviewParams): PublicProfile |
       title: p.title,
       description: p.description,
       link: p.link ?? null,
+      image: p.image ?? null,
     })),
     gallery,
     contact: {

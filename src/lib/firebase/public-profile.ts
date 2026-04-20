@@ -97,11 +97,18 @@ export async function getPublicProfileByHandle(handle: string): Promise<PublicPr
       .filter((s) => s.name.length > 0),
     portfolio: rawPortfolio
       .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
-      .map((p) => ({
-        title: (p.title as string) ?? "",
-        description: (p.description as string) ?? "",
-        link: (p.link as string | null) ?? null,
-      }))
+      .map((p) => {
+        const img = p.image as Record<string, unknown> | null | undefined;
+        return {
+          title: (p.title as string) ?? "",
+          description: (p.description as string) ?? "",
+          link: (p.link as string | null) ?? null,
+          image:
+            img && typeof img.url === "string" && typeof img.path === "string"
+              ? { url: img.url, path: img.path }
+              : null,
+        };
+      })
       .filter((p) => p.title.length > 0),
     gallery: rawGallery
       .filter((g): g is Record<string, unknown> => typeof g === "object" && g !== null)

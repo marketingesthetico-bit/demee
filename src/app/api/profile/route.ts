@@ -79,6 +79,7 @@ const patchSchema = z
           title: z.string().min(1).max(120),
           description: z.string().max(280),
           link: z.string().url().nullable().optional(),
+          image: imageRefSchema.nullable().optional(),
         }),
       )
       .max(12)

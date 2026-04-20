@@ -24,6 +24,7 @@ export const importedProfileSchema = z.object({
         title: z.string(),
         description: z.string(),
         link: z.string().optional(),
+        image: galleryImageSchema.optional(),
       }),
     )
     .optional(),

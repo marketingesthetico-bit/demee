@@ -47,6 +47,7 @@ const importedSchema = z
           title: z.string().min(1).max(120),
           description: z.string().max(280),
           link: z.string().url().optional(),
+          image: imageRefSchema.optional(),
         }),
       )
       .max(12)

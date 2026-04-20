@@ -59,6 +59,12 @@ export function generateGalleryPath(file: File): string {
   return `gallery/${ts}-${random}.${extensionFor(file.type)}`;
 }
 
+export function generatePortfolioPath(file: File): string {
+  const ts = Date.now();
+  const random = Math.random().toString(36).slice(2, 8);
+  return `portfolio/${ts}-${random}.${extensionFor(file.type)}`;
+}
+
 function validate(file: File): void {
   if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
     throw new ImageUploadError("invalid-type", file.type);

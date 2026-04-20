@@ -12,6 +12,7 @@ export interface PublicPortfolioItem {
   title: string;
   description: string;
   link: string | null;
+  image: PublicGalleryImage | null;
 }
 
 export interface PublicGalleryImage {
