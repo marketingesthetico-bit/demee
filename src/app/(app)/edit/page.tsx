@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { EditorShell } from "@/components/editor/EditorShell";
 import type { SupportedIndustry } from "@/lib/industries";
 import { getServerSession } from "@/lib/firebase/session";
+import { loadOwnBookingConfig } from "@/lib/firebase/booking-loader";
 import { loadOwnBudget } from "@/lib/firebase/budget-loader";
 import { loadOwnProfile } from "@/lib/firebase/user-profile";
 
@@ -38,12 +39,16 @@ export default async function EditPage() {
     ? (loaded.profile.industry as SupportedIndustry)
     : null;
 
-  const budget = await loadOwnBudget(session.uid, industryForTemplate);
+  const [budget, booking] = await Promise.all([
+    loadOwnBudget(session.uid, industryForTemplate),
+    loadOwnBookingConfig(session.uid),
+  ]);
 
   return (
     <EditorShell
       initialProfile={loaded.profile}
       initialBudget={budget}
+      initialBooking={booking}
       handle={loaded.handle}
     />
   );

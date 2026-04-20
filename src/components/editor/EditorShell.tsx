@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PublicPageBody } from "@/components/public/PublicPageBody";
 import { ThemeProvider } from "@/components/public/ThemeProvider";
 import type { SupportedAesthetic } from "@/lib/aesthetics";
+import type { BookingConfig } from "@/lib/booking/types";
 import type { BudgetConfig } from "@/lib/budget/types";
 import type { ProfileSectionKey } from "@/lib/industries";
 import type { EditableProfile } from "@/lib/profile/editable";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 import { AboutForm } from "./AboutForm";
 import { AestheticPicker } from "./AestheticPicker";
+import { BookingForm } from "./BookingForm";
 import { BudgetForm } from "./BudgetForm";
 import { ContactForm } from "./ContactForm";
 import { HeaderForm } from "./HeaderForm";
@@ -39,6 +41,7 @@ const SAVE_DEBOUNCE_MS = 800;
 interface Props {
   initialProfile: EditableProfile;
   initialBudget: BudgetConfig;
+  initialBooking: BookingConfig;
   handle: string;
 }
 
@@ -50,12 +53,13 @@ function toPublicPreview(
   profile: EditableProfile,
   handle: string,
   hasBudget: boolean,
+  hasBooking: boolean,
 ): PublicProfile {
   return {
     uid: "preview",
     handle,
     hasBudget,
-    hasBooking: false,
+    hasBooking,
     industry: profile.industry,
     aesthetic: profile.aesthetic,
     defaultSections: profile.defaultSections,
@@ -85,15 +89,23 @@ type ProfilePatch = Partial<{
   contact: EditableProfile["contact"];
 }>;
 
-export function EditorShell({ initialProfile, initialBudget, handle }: Props) {
+export function EditorShell({
+  initialProfile,
+  initialBudget,
+  initialBooking,
+  handle,
+}: Props) {
   const [profile, setProfile] = useState<EditableProfile>(initialProfile);
   const [budget, setBudget] = useState<BudgetConfig>(initialBudget);
+  const [booking, setBooking] = useState<BookingConfig>(initialBooking);
   const [status, setStatus] = useState<SaveStatus>({ kind: "clean" });
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
   const pendingPatch = useRef<ProfilePatch>({});
   const pendingBudget = useRef<BudgetConfig | null>(null);
+  const pendingBooking = useRef<BookingConfig | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const budgetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bookingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flushSave = useCallback(async () => {
     const patch = pendingPatch.current;
@@ -169,10 +181,44 @@ export function EditorShell({ initialProfile, initialBudget, handle }: Props) {
     budgetTimerRef.current = setTimeout(flushBudgetSave, SAVE_DEBOUNCE_MS);
   }
 
+  const flushBookingSave = useCallback(async () => {
+    const next = pendingBooking.current;
+    if (!next) {
+      setStatus({ kind: "clean" });
+      return;
+    }
+    pendingBooking.current = null;
+    setStatus({ kind: "saving" });
+    try {
+      const res = await fetch("/api/booking", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      if (!res.ok) {
+        setStatus({ kind: "error", message: "No se pudo guardar la agenda." });
+        return;
+      }
+      setStatus({ kind: "saved", at: Date.now() });
+    } catch (err) {
+      console.error("[editor/booking] save failed", err);
+      setStatus({ kind: "error", message: "Error de red." });
+    }
+  }, []);
+
+  function updateBooking(next: BookingConfig) {
+    setBooking(next);
+    pendingBooking.current = next;
+    setStatus({ kind: "dirty" });
+    if (bookingTimerRef.current) clearTimeout(bookingTimerRef.current);
+    bookingTimerRef.current = setTimeout(flushBookingSave, SAVE_DEBOUNCE_MS);
+  }
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (budgetTimerRef.current) clearTimeout(budgetTimerRef.current);
+      if (bookingTimerRef.current) clearTimeout(bookingTimerRef.current);
     };
   }, []);
 
@@ -220,6 +266,7 @@ export function EditorShell({ initialProfile, initialBudget, handle }: Props) {
     profile,
     handle,
     budget.enabled && budget.items.length > 0,
+    booking.enabled,
   );
 
   return (
@@ -288,6 +335,14 @@ export function EditorShell({ initialProfile, initialBudget, handle }: Props) {
           defaultOpen={false}
         >
           <BudgetForm value={budget} onChange={updateBudget} />
+        </SectionCard>
+
+        <SectionCard
+          title="Agenda"
+          subtitle="Reserva de llamadas en demee.app/tuhandle/book cuando está activa."
+          defaultOpen={false}
+        >
+          <BookingForm value={booking} onChange={updateBooking} />
         </SectionCard>
 
         <SectionCard

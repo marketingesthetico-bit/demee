@@ -19,6 +19,12 @@ service cloud.firestore {
         allow read: if true;
         allow write: if request.auth != null && request.auth.uid == uid;
       }
+
+      // Booking config. Public read so the /[handle]/book page can render.
+      match /booking/{doc=**} {
+        allow read: if true;
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
     }
 
     // Handle → uid index. Public read so /[handle] can resolve. Writes are
@@ -32,6 +38,15 @@ service cloud.firestore {
     // Leads are created by the public budget form via the API route (Admin SDK,
     // which bypasses these rules). Only the owner reads or updates their own.
     match /leads/{leadId} {
+      allow create: if false;
+      allow read, update: if request.auth != null
+        && request.auth.uid == resource.data.ownerUid;
+      allow delete: if false;
+    }
+
+    // Bookings: same pattern — public /book form calls the API, only
+    // the owner can read or update their own bookings.
+    match /bookings/{bookingId} {
       allow create: if false;
       allow read, update: if request.auth != null
         && request.auth.uid == resource.data.ownerUid;
