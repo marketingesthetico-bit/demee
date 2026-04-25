@@ -56,16 +56,20 @@ export default async function PublicHandlePage({ params }: Params) {
     >
       {/*
         Layout breakpoints:
-        - Mobile / tablet: centered, readable column (max-w-3xl).
-        - lg+ (≥1024): left-aligned with a clamped left margin that grows with
-          the viewport (1.5rem → 6vw → 6rem), and a right reserve of 300px for
-          the vertical sticky bar. Content is capped at max-w-5xl so very wide
-          monitors don't turn lines into essays.
+        - Mobile / tablet: centered max-w-3xl reading column for every
+          aesthetic — readability wins over canvas variation on phones.
+        - lg+ (≥1024): left-aligned with a clamped left margin and a
+          300px right reserve for the vertical sticky bar. The cap is
+          per-aesthetic (see AESTHETIC_LG_MAX_WIDTH below) so the canvas
+          itself reads differently — minimal/editorial sit in a narrow
+          reading column, corporate/bold sprawl wider for denser
+          layouts, playful/artistic land in the middle.
       */}
       <main
         className={cn(
           "mx-auto max-w-3xl px-6 py-16 pb-32 sm:px-8 sm:py-24",
-          "lg:mx-0 lg:ml-[clamp(1.5rem,6vw,6rem)] lg:mr-[300px] lg:max-w-5xl lg:pb-24",
+          "lg:mx-0 lg:ml-[clamp(1.5rem,6vw,6rem)] lg:mr-[300px] lg:pb-24",
+          AESTHETIC_LG_MAX_WIDTH[profile.aesthetic] ?? "lg:max-w-5xl",
         )}
       >
         <PublicPageBody profile={profile} />
@@ -74,3 +78,12 @@ export default async function PublicHandlePage({ params }: Params) {
     </ThemeProvider>
   );
 }
+
+const AESTHETIC_LG_MAX_WIDTH: Record<string, string> = {
+  minimal: "lg:max-w-3xl",
+  editorial: "lg:max-w-3xl",
+  playful: "lg:max-w-4xl",
+  artistic: "lg:max-w-4xl",
+  corporate: "lg:max-w-5xl",
+  bold: "lg:max-w-5xl",
+};
