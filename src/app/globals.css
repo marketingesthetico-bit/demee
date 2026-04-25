@@ -22,3 +22,108 @@
     @apply bg-mustard/40 text-ink;
   }
 }
+
+/*
+ * Playful aesthetic only — small, looped CSS animations that show up
+ * as decorative graphics around the layout. Scoped via the
+ * `data-aesthetic="playful"` attribute the ThemeProvider sets on the
+ * page root, so they cannot leak into the editor chrome or any other
+ * aesthetic. Every animation respects prefers-reduced-motion.
+ */
+
+/* Wavy underline that lives under every section heading. Implemented
+ * as a CSS-only ::after with a mask carved by an inline SVG, so the
+ * stroke colour follows the user's accent (including overrides from
+ * the colour picker). The mask scrolls horizontally to give the wave
+ * a slow "drift" motion. */
+[data-aesthetic="playful"] h2.font-aesthetic-display {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.45rem;
+}
+
+[data-aesthetic="playful"] h2.font-aesthetic-display::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 8px;
+  width: 100%;
+  background-color: var(--aesthetic-color-accent);
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 10' fill='none'><path d='M0 5 Q6 1 12 5 T24 5' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 10' fill='none'><path d='M0 5 Q6 1 12 5 T24 5' stroke='black' stroke-width='2' stroke-linecap='round' fill='none'/></svg>");
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  -webkit-mask-size: 24px 8px;
+  mask-size: 24px 8px;
+  -webkit-mask-position: 0 center;
+  mask-position: 0 center;
+  animation: playful-wave 3.5s linear infinite;
+}
+
+@keyframes playful-wave {
+  from {
+    -webkit-mask-position: 0 center;
+    mask-position: 0 center;
+  }
+  to {
+    -webkit-mask-position: -24px center;
+    mask-position: -24px center;
+  }
+}
+
+/* Floating shapes — drifting circles that decorate the public header.
+ * Each child gets a slightly different orbit + duration + delay so
+ * they don't move in lockstep. */
+@keyframes playful-drift-a {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(6px, -8px); }
+}
+@keyframes playful-drift-b {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-7px, 5px); }
+}
+@keyframes playful-drift-c {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(4px, 6px); }
+}
+
+[data-aesthetic="playful"] .playful-drift-a {
+  animation: playful-drift-a 6s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+[data-aesthetic="playful"] .playful-drift-b {
+  animation: playful-drift-b 7.5s ease-in-out 0.4s infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+[data-aesthetic="playful"] .playful-drift-c {
+  animation: playful-drift-c 5.5s ease-in-out 1s infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Sparkle — twinkling 4-point star next to the contact heading. */
+@keyframes playful-sparkle {
+  0%, 100% { transform: scale(0.7) rotate(0deg);   opacity: 0.45; }
+  50%      { transform: scale(1)   rotate(45deg);  opacity: 1;    }
+}
+
+[data-aesthetic="playful"] .playful-sparkle {
+  animation: playful-sparkle 2.6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Honour the user's OS-level "reduce motion" preference — every
+ * decorative animation freezes, but the SVGs themselves stay visible
+ * so the layout doesn't suddenly miss its accents. */
+@media (prefers-reduced-motion: reduce) {
+  [data-aesthetic="playful"] h2.font-aesthetic-display::after,
+  [data-aesthetic="playful"] .playful-drift-a,
+  [data-aesthetic="playful"] .playful-drift-b,
+  [data-aesthetic="playful"] .playful-drift-c,
+  [data-aesthetic="playful"] .playful-sparkle {
+    animation: none !important;
+  }
+}

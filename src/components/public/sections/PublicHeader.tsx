@@ -3,6 +3,8 @@ import Image from "next/image";
 import type { PublicProfile } from "@/lib/profile/public";
 import { cn } from "@/lib/utils";
 
+import { PlayfulHeaderShapes } from "../aesthetics/PlayfulDecorations";
+
 const AVAILABILITY_COPY: Record<
   PublicProfile["header"]["availability"],
   { label: string; dot: string }
@@ -100,8 +102,13 @@ export function PublicHeader({ profile }: { profile: PublicProfile }) {
   const style = STYLES[profile.aesthetic] ?? STYLES.minimal;
 
   return (
-    <header className={style.root}>
-      <div className={style.avatarWrap}>
+    <header className={cn(style.root, "relative")}>
+      {profile.aesthetic === "playful" && (
+        // Drifting circles tucked into the top-right corner — small,
+        // out of the content flow, behind anything text-related.
+        <PlayfulHeaderShapes className="absolute -top-2 right-0 z-0 sm:-top-4" />
+      )}
+      <div className={cn(style.avatarWrap, "relative z-10")}>
         {profile.header.photoURL ? (
           <Image
             src={profile.header.photoURL}

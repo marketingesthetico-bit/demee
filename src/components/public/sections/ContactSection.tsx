@@ -1,6 +1,8 @@
 import type { PublicProfile } from "@/lib/profile/public";
 import { cn } from "@/lib/utils";
 
+import { PlayfulSparkle } from "../aesthetics/PlayfulDecorations";
+
 const SOCIAL_LABELS: Record<keyof PublicProfile["contact"]["social"], string> = {
   linkedin: "LinkedIn",
   twitter: "X / Twitter",
@@ -123,9 +125,26 @@ export function ContactSection({ profile }: { profile: PublicProfile }) {
 
   const style = STYLES[profile.aesthetic] ?? STYLES.minimal;
 
+  const isPlayful = profile.aesthetic === "playful";
+
   return (
     <section className={style.root}>
-      <div className={style.intro}>
+      <div className={cn(style.intro, isPlayful && "relative")}>
+        {isPlayful && (
+          // Frame the centred heading with a pair of twinkling stars —
+          // anchored to the .intro wrapper so they sit symmetrically
+          // around the H2's text.
+          <>
+            <PlayfulSparkle
+              size={14}
+              className="absolute -left-7 top-1 hidden sm:block"
+            />
+            <PlayfulSparkle
+              size={18}
+              className="absolute -right-6 -top-2 hidden sm:block"
+            />
+          </>
+        )}
         <h2 className={style.heading}>Hablemos</h2>
         <p className={style.subtitle}>{subtitle}</p>
       </div>
