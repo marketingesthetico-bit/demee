@@ -42,8 +42,8 @@ export function ImagesForm({ header, gallery, onHeaderChange, onGalleryChange }:
         </label>
         <GalleryUpload value={gallery} onChange={onGalleryChange} max={6} />
         <p className="text-xs text-ink/50">
-          La galería se adapta al estilo visual elegido: minimal, editorial o bold la renderizan de
-          forma distinta.
+          La galería se adapta al estilo visual elegido: cada estética la renderiza
+          de forma distinta.
         </p>
       </div>
     </div>

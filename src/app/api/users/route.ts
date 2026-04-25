@@ -20,7 +20,14 @@ const industrySchema = z.enum([
   "marketing-consultant",
   "architect",
 ]);
-const aestheticSchema = z.enum(["minimal", "editorial", "bold"]);
+const aestheticSchema = z.enum([
+  "minimal",
+  "editorial",
+  "bold",
+  "playful",
+  "corporate",
+  "artistic",
+]);
 
 const imageRefSchema = z.object({
   url: z.string().url().max(1000),

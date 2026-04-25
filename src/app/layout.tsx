@@ -11,6 +11,16 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
 };
 
+// Each public-facing aesthetic gets its own typographic voice. Keeping
+// the families in one stylesheet request (one HTTP round-trip) avoids
+// blowing up TTFB now that we ship 6 themes:
+//
+//   minimal    → Inter
+//   editorial  → Fraunces + Source Serif 4
+//   bold       → Archivo Black + Archivo
+//   playful    → Outfit
+//   corporate  → Manrope + Inter
+//   artistic   → Caprasimo + Source Serif 4
 const GOOGLE_FONTS_HREF =
   "https://fonts.googleapis.com/css2?" +
   [
@@ -19,6 +29,9 @@ const GOOGLE_FONTS_HREF =
     "family=Source+Serif+4:ital,wght@0,400;0,600;1,400",
     "family=Archivo:wght@400;500;600;700",
     "family=Archivo+Black",
+    "family=Outfit:wght@400;500;600;700;800",
+    "family=Manrope:wght@400;500;600;700;800",
+    "family=Caprasimo",
   ].join("&") +
   "&display=swap";
 

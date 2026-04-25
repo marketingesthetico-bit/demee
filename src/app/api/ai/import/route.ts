@@ -29,6 +29,9 @@ const VALID_AESTHETICS: readonly SupportedAesthetic[] = [
   "minimal",
   "editorial",
   "bold",
+  "playful",
+  "corporate",
+  "artistic",
 ] as const;
 
 export async function POST(req: Request) {

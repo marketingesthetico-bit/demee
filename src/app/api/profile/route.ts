@@ -9,7 +9,14 @@ import { getServerSession } from "@/lib/firebase/session";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const aestheticSchema = z.enum(["minimal", "editorial", "bold"]);
+const aestheticSchema = z.enum([
+  "minimal",
+  "editorial",
+  "bold",
+  "playful",
+  "corporate",
+  "artistic",
+]);
 const availabilitySchema = z.enum(["available", "limited", "closed"]);
 const sectionKeySchema = z.enum([
   "header",

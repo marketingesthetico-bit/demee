@@ -56,7 +56,14 @@ const industrySchema = z.enum([
   "architect",
 ]);
 
-const aestheticSchema = z.enum(["minimal", "editorial", "bold"]);
+const aestheticSchema = z.enum([
+  "minimal",
+  "editorial",
+  "bold",
+  "playful",
+  "corporate",
+  "artistic",
+]);
 
 export const onboardingDraftSchema = z.object({
   industry: industrySchema.optional(),

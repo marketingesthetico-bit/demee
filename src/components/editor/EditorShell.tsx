@@ -325,9 +325,16 @@ export function EditorShell({
           <ColorsForm
             value={profile.themeColors}
             aesthetic={
-              (["minimal", "editorial", "bold"] as SupportedAesthetic[]).includes(
-                profile.aesthetic as SupportedAesthetic,
-              )
+              (
+                [
+                  "minimal",
+                  "editorial",
+                  "bold",
+                  "playful",
+                  "corporate",
+                  "artistic",
+                ] as SupportedAesthetic[]
+              ).includes(profile.aesthetic as SupportedAesthetic)
                 ? (profile.aesthetic as SupportedAesthetic)
                 : "minimal"
             }
