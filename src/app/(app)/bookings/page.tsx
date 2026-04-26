@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { BookingsPageShell } from "@/components/dashboard/BookingsPageShell";
+import { PlanUsageBadge } from "@/components/dashboard/PlanUsageBadge";
 import type { GoogleConnectionStatus } from "@/components/editor/GoogleCalendarConnect";
 import { loadBookingsForOwner, loadOwnBookingConfig } from "@/lib/firebase/booking-loader";
 import { loadGoogleIntegration } from "@/lib/firebase/google-integration";
 import { getServerSession } from "@/lib/firebase/session";
 import { loadOwnProfile } from "@/lib/firebase/user-profile";
 import { isGoogleOAuthConfigured } from "@/lib/google/oauth";
+import { checkBookingQuota } from "@/lib/plans/quotas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,10 +25,11 @@ export default async function BookingsPage() {
   const owner = await loadOwnProfile(session.uid);
   if (!owner) redirect("/onboarding");
 
-  const [bookings, bookingConfig, googleIntegration] = await Promise.all([
+  const [bookings, bookingConfig, googleIntegration, quota] = await Promise.all([
     loadBookingsForOwner(session.uid),
     loadOwnBookingConfig(session.uid),
     loadGoogleIntegration(session.uid),
+    checkBookingQuota(session.uid),
   ]);
 
   const googleStatus: GoogleConnectionStatus = {
@@ -46,6 +49,7 @@ export default async function BookingsPage() {
           <code className="font-mono">demee.app/{owner.handle}/book</code>.
         </p>
       </header>
+      <PlanUsageBadge kind="bookings" used={quota.used} limit={quota.limit} />
       <BookingsPageShell
         initialBookings={bookings}
         initialConfig={bookingConfig}

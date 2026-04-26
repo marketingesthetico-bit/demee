@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { BookingRequestForm } from "@/components/public/BookingRequestForm";
+import { QuotaClosedNotice } from "@/components/public/QuotaClosedNotice";
 import { ThemeProvider } from "@/components/public/ThemeProvider";
 import { validateHandleFormat } from "@/lib/constants/reserved-handles";
 import { loadPublicBookingConfig } from "@/lib/firebase/booking-loader";
 import { getPublicProfileByHandle } from "@/lib/firebase/public-profile";
+import { startOfNextUtcMonth } from "@/lib/plans/config";
+import { checkBookingQuota } from "@/lib/plans/quotas";
 
-export const revalidate = 60;
+// Quota check needs the owner's current usage — bypass ISR.
+export const dynamic = "force-dynamic";
 
 interface Params {
   params: { handle: string };
@@ -34,6 +38,10 @@ export default async function PublicBookPage({ params }: Params) {
   ]);
   if (!bundle || !profile) notFound();
 
+  // Soft-close the form when the owner is at their plan cap.
+  // Defence in depth: POST /api/bookings rejects too.
+  const quota = await checkBookingQuota(bundle.uid);
+
   return (
     <ThemeProvider
       aesthetic={profile.aesthetic}
@@ -51,27 +59,41 @@ export default async function PublicBookPage({ params }: Params) {
           <h1 className="font-aesthetic-display text-4xl leading-tight sm:text-5xl">
             Agenda con {profile.header.name}
           </h1>
-          <p className="max-w-xl text-aesthetic-fg/80">
-            <strong>{bundle.config.name}</strong> · {bundle.config.durationMinutes} min
-            {" · "}
-            {bundle.config.locationType === "online"
-              ? "online"
-              : bundle.config.locationType === "phone"
-                ? "teléfono"
-                : "presencial"}
-          </p>
-          {bundle.config.description && (
-            <p className="max-w-xl text-sm text-aesthetic-fg/70">
-              {bundle.config.description}
-            </p>
-          )}
-          {bundle.config.introText && (
-            <p className="max-w-xl text-sm text-aesthetic-fg/70">{bundle.config.introText}</p>
+          {quota.allowed && (
+            <>
+              <p className="max-w-xl text-aesthetic-fg/80">
+                <strong>{bundle.config.name}</strong> · {bundle.config.durationMinutes} min
+                {" · "}
+                {bundle.config.locationType === "online"
+                  ? "online"
+                  : bundle.config.locationType === "phone"
+                    ? "teléfono"
+                    : "presencial"}
+              </p>
+              {bundle.config.description && (
+                <p className="max-w-xl text-sm text-aesthetic-fg/70">
+                  {bundle.config.description}
+                </p>
+              )}
+              {bundle.config.introText && (
+                <p className="max-w-xl text-sm text-aesthetic-fg/70">
+                  {bundle.config.introText}
+                </p>
+              )}
+            </>
           )}
         </header>
 
         <div className="mt-10">
-          <BookingRequestForm handle={handle} config={bundle.config} />
+          {quota.allowed ? (
+            <BookingRequestForm handle={handle} config={bundle.config} />
+          ) : (
+            <QuotaClosedNotice
+              kind="bookings"
+              ownerName={profile.header.name}
+              resetsAt={startOfNextUtcMonth()}
+            />
+          )}
         </div>
       </main>
     </ThemeProvider>

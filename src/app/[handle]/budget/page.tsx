@@ -2,12 +2,17 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { BudgetRequestForm } from "@/components/public/BudgetRequestForm";
+import { QuotaClosedNotice } from "@/components/public/QuotaClosedNotice";
 import { ThemeProvider } from "@/components/public/ThemeProvider";
 import { validateHandleFormat } from "@/lib/constants/reserved-handles";
 import { loadPublicBudget } from "@/lib/firebase/budget-loader";
 import { getPublicProfileByHandle } from "@/lib/firebase/public-profile";
+import { startOfNextUtcMonth } from "@/lib/plans/config";
+import { checkLeadQuota } from "@/lib/plans/quotas";
 
-export const revalidate = 60;
+// Quota check needs the owner's current usage, which can change between
+// page loads — so we can't safely ISR-cache this page anymore.
+export const dynamic = "force-dynamic";
 
 interface Params {
   params: { handle: string };
@@ -36,6 +41,11 @@ export default async function PublicBudgetPage({ params }: Params) {
   ]);
   if (!bundle || !profile) notFound();
 
+  // Soft-close the form when the owner is at their plan cap. Defence
+  // in depth: POST /api/leads also rejects the request, so visitors
+  // can't bypass this by hitting the API directly.
+  const quota = await checkLeadQuota(bundle.uid);
+
   return (
     <ThemeProvider
       aesthetic={profile.aesthetic}
@@ -53,17 +63,25 @@ export default async function PublicBudgetPage({ params }: Params) {
           <h1 className="font-aesthetic-display text-4xl leading-tight sm:text-5xl">
             Pide presupuesto a {profile.header.name}
           </h1>
-          {bundle.config.introText && (
+          {bundle.config.introText && quota.allowed && (
             <p className="max-w-xl text-aesthetic-fg/80">{bundle.config.introText}</p>
           )}
         </header>
 
         <div className="mt-10">
-          <BudgetRequestForm
-            handle={handle}
-            config={bundle.config}
-            hasBooking={profile.hasBooking}
-          />
+          {quota.allowed ? (
+            <BudgetRequestForm
+              handle={handle}
+              config={bundle.config}
+              hasBooking={profile.hasBooking}
+            />
+          ) : (
+            <QuotaClosedNotice
+              kind="leads"
+              ownerName={profile.header.name}
+              resetsAt={startOfNextUtcMonth()}
+            />
+          )}
         </div>
       </main>
     </ThemeProvider>

@@ -12,6 +12,7 @@ import {
   CalendarApiError,
   createCalendarEvent,
 } from "@/lib/google/calendar";
+import { checkBookingQuota } from "@/lib/plans/quotas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,6 +49,23 @@ export async function POST(req: Request) {
   const bundle = await loadPublicBookingConfig(handle);
   if (!bundle) {
     return NextResponse.json({ error: "booking-not-found" }, { status: 404 });
+  }
+
+  // Plan-level cap on received bookings. Free is monthly-capped
+  // (10/month UTC, cancelled bookings excluded), Pro/Studio are
+  // unlimited. We check before slot validation so visitors get a clear
+  // 429 instead of 400/409 when the owner is at their cap.
+  const quota = await checkBookingQuota(bundle.uid);
+  if (!quota.allowed) {
+    return NextResponse.json(
+      {
+        error: "booking-quota-exceeded",
+        plan: quota.plan,
+        used: quota.used,
+        limit: quota.limit,
+      },
+      { status: 429 },
+    );
   }
 
   const startsAt = new Date(parsed.data.startsAt);

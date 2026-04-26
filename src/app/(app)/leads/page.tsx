@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { LeadsPageShell } from "@/components/dashboard/LeadsPageShell";
+import { PlanUsageBadge } from "@/components/dashboard/PlanUsageBadge";
 import { loadOwnBudget } from "@/lib/firebase/budget-loader";
 import { loadLeadsForOwner } from "@/lib/firebase/leads-loader";
 import { getServerSession } from "@/lib/firebase/session";
 import { loadOwnProfile } from "@/lib/firebase/user-profile";
 import type { SupportedIndustry } from "@/lib/industries";
+import { checkLeadQuota } from "@/lib/plans/quotas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,9 +41,10 @@ export default async function LeadsPage() {
     ? (owner.profile.industry as SupportedIndustry)
     : null;
 
-  const [leads, budget] = await Promise.all([
+  const [leads, budget, quota] = await Promise.all([
     loadLeadsForOwner(session.uid),
     loadOwnBudget(session.uid, industryForTemplate),
+    checkLeadQuota(session.uid),
   ]);
 
   // Firestore Timestamps can't cross the Server/Client boundary — coerce
@@ -60,6 +63,7 @@ export default async function LeadsPage() {
           <code className="font-mono">demee.app/{owner.handle}/budget</code>.
         </p>
       </header>
+      <PlanUsageBadge kind="leads" used={quota.used} limit={quota.limit} />
       <LeadsPageShell
         initialLeads={plainLeads}
         initialConfig={budget}

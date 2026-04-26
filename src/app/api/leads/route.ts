@@ -10,6 +10,7 @@ import {
   buildGuestConfirmationEmail,
 } from "@/lib/email/templates";
 import { sendEmail } from "@/lib/email/resend";
+import { checkLeadQuota } from "@/lib/plans/quotas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,6 +52,22 @@ export async function POST(req: Request) {
   const bundle = await loadPublicBudget(handle);
   if (!bundle) {
     return NextResponse.json({ error: "budget-not-found" }, { status: 404 });
+  }
+
+  // Plan-level cap on received leads. Free is monthly-capped (10/month
+  // UTC), Pro/Studio are unlimited. This blocks even before the budget
+  // calculation so we don't waste work on a request we'd reject anyway.
+  const quota = await checkLeadQuota(bundle.uid);
+  if (!quota.allowed) {
+    return NextResponse.json(
+      {
+        error: "lead-quota-exceeded",
+        plan: quota.plan,
+        used: quota.used,
+        limit: quota.limit,
+      },
+      { status: 429 },
+    );
   }
 
   const budget = calculateBudget(bundle.config, parsed.data.selections);

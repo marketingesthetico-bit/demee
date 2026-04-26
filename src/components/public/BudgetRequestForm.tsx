@@ -117,6 +117,17 @@ export function BudgetRequestForm({ handle, config, hasBooking }: Props) {
         error?: string;
       };
       if (!res.ok || !data.ok) {
+        // Owner hit the Free-tier monthly cap between the page render
+        // and this submit. Race-condition window is small; surface a
+        // calm message rather than the generic "no se pudo enviar".
+        if (data.error === "lead-quota-exceeded") {
+          setStatus({
+            kind: "error",
+            message:
+              "Este freelancer ya no acepta más solicitudes este mes. Vuelve a intentarlo el mes que viene.",
+          });
+          return;
+        }
         setStatus({
           kind: "error",
           message: data.error === "invalid-body" ? "Revisa los datos." : "No se pudo enviar.",

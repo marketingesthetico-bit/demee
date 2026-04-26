@@ -19,6 +19,11 @@ const ERROR_COPY: Record<string, string> = {
   "slot-too-far": "Esa fecha supera el máximo permitido.",
   "slot-taken": "Ese horario acaba de ocuparse. Elige otro.",
   "booking-not-found": "Este freelancer no acepta reservas ahora.",
+  // Race condition: owner hit their Free-tier cap while the visitor
+  // had the form open. The /[handle]/book server page already shows a
+  // closed-state when over quota, so this only fires on the boundary.
+  "booking-quota-exceeded":
+    "Este freelancer ya no acepta más reuniones este mes. Vuelve a intentarlo el mes que viene.",
 };
 
 /** Format "YYYY-MM-DD" in Madrid for a given UTC instant offset. */

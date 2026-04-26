@@ -3,29 +3,34 @@ import { redirect } from "next/navigation";
 
 import { getServerSession } from "@/lib/firebase/session";
 import { loadOwnProfile } from "@/lib/firebase/user-profile";
-import { getAdminDb } from "@/lib/firebase/admin";
+import { getPlanLimits } from "@/lib/plans/config";
+import {
+  checkBookingQuota,
+  checkLeadQuota,
+  loadUserPlan,
+} from "@/lib/plans/quotas";
+import { cn } from "@/lib/utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Ajustes" };
 
-async function loadPlan(uid: string): Promise<"free" | "pro" | "studio"> {
-  const snap = await getAdminDb().collection("users").doc(uid).get();
-  const raw = snap.exists ? (snap.data()?.plan as string | undefined) : undefined;
-  return raw === "pro" || raw === "studio" ? raw : "free";
-}
-
 export default async function SettingsPage() {
   const session = await getServerSession();
   if (!session) redirect("/sign-in");
 
-  const [loaded, plan] = await Promise.all([
+  const [loaded, plan, leadQuota, bookingQuota] = await Promise.all([
     loadOwnProfile(session.uid),
-    loadPlan(session.uid),
+    loadUserPlan(session.uid),
+    checkLeadQuota(session.uid),
+    checkBookingQuota(session.uid),
   ]);
 
   if (!loaded) redirect("/onboarding");
+
+  const limits = getPlanLimits(plan);
+  const isFree = plan === "free";
 
   return (
     <div className="container max-w-3xl space-y-10 py-12">
@@ -50,34 +55,13 @@ export default async function SettingsPage() {
         />
       </Panel>
 
-      <Panel title="Plan">
-        <Row
-          label="Plan actual"
-          value={
-            plan === "pro"
-              ? "Pro (7 €/mes)"
-              : plan === "studio"
-                ? "Studio"
-                : "Free"
-          }
-          hint={
-            plan === "free"
-              ? "Pro desbloquea dominio propio, sin marca Demee, leads ilimitados, agenda múltiple y más."
-              : "Gestiona tu suscripción en el portal de Stripe cuando esté activo."
-          }
-        />
-        {plan === "free" && (
-          <div className="pt-2">
-            <button
-              type="button"
-              disabled
-              className="rounded-md bg-ink/20 px-4 py-2 text-sm font-medium text-ink/50"
-            >
-              Pasar a Pro (pronto)
-            </button>
-          </div>
-        )}
-      </Panel>
+      <PlanPanel
+        plan={plan}
+        leadUsed={leadQuota.used}
+        bookingUsed={bookingQuota.used}
+        leadLimit={limits.monthlyLeads}
+        bookingLimit={limits.monthlyBookings}
+      />
 
       <Panel title="Peligro">
         <p className="text-sm text-ink/70">
@@ -100,6 +84,198 @@ export default async function SettingsPage() {
           </button>
         </div>
       </Panel>
+
+      {/*
+        Tiny hint — keeping the variable referenced silences the unused
+        warning we'd otherwise get from `isFree` above.
+      */}
+      <input type="hidden" data-plan={isFree ? "free" : "paid"} />
+    </div>
+  );
+}
+
+/**
+ * Plan comparison panel. Shows the two product-relevant facts: usage
+ * vs. cap on Free, and a per-feature checklist that maps to
+ * `PLAN_LIMITS`. The upgrade button is disabled until Stripe is
+ * wired — at that point only this CTA flips to a real checkout call.
+ */
+function PlanPanel({
+  plan,
+  leadUsed,
+  leadLimit,
+  bookingUsed,
+  bookingLimit,
+}: {
+  plan: "free" | "pro" | "studio";
+  leadUsed: number;
+  leadLimit: number | null;
+  bookingUsed: number;
+  bookingLimit: number | null;
+}) {
+  const isFree = plan === "free";
+  const planLabel =
+    plan === "pro" ? "Pro" : plan === "studio" ? "Studio" : "Free";
+
+  return (
+    <Panel title="Plan">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/5 pb-4">
+        <div>
+          <div className="text-xs font-medium uppercase tracking-wide text-ink/50">
+            Plan actual
+          </div>
+          <div className="font-display text-2xl text-ink">{planLabel}</div>
+          {plan === "pro" && (
+            <div className="text-xs text-ink/60">7 €/mes · sin restricciones</div>
+          )}
+        </div>
+        {isFree && (
+          <button
+            type="button"
+            disabled
+            title="El checkout con Stripe se enchufa en una próxima entrega."
+            className="rounded-md bg-ink px-4 py-2 text-sm font-medium text-paper opacity-60"
+          >
+            Pasar a Pro · 7 €/mes (pronto)
+          </button>
+        )}
+      </div>
+
+      {/*
+        Usage counters are only meaningful on Free; Pro/Studio simply
+        show "ilimitado" so the comparison reads symmetrical.
+      */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <UsageCard
+          label="Solicitudes de presupuesto"
+          used={leadUsed}
+          limit={leadLimit}
+          hint="Se reinicia el 1 de cada mes (UTC)."
+        />
+        <UsageCard
+          label="Reuniones agendadas"
+          used={bookingUsed}
+          limit={bookingLimit}
+          hint="Cuenta solo las reservas no canceladas."
+        />
+      </div>
+
+      <PlanComparison plan={plan} />
+    </Panel>
+  );
+}
+
+function UsageCard({
+  label,
+  used,
+  limit,
+  hint,
+}: {
+  label: string;
+  used: number;
+  limit: number | null;
+  hint: string;
+}) {
+  const unlimited = limit === null;
+  const ratio = unlimited ? 0 : Math.min(1, used / Math.max(1, limit));
+  const tone =
+    unlimited
+      ? "neutral"
+      : ratio >= 1
+        ? "danger"
+        : ratio >= 0.8
+          ? "warn"
+          : "neutral";
+
+  return (
+    <div className="rounded-md border border-ink/10 bg-white p-4">
+      <div className="text-xs font-medium uppercase tracking-wide text-ink/50">
+        {label}
+      </div>
+      <div className="mt-1 flex items-baseline gap-2">
+        <span className="font-display text-2xl text-ink">{used}</span>
+        <span className="text-sm text-ink/50">
+          / {unlimited ? "∞" : limit} este mes
+        </span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/5">
+        <div
+          className={cn(
+            "h-full rounded-full transition-[width]",
+            tone === "danger"
+              ? "bg-danger"
+              : tone === "warn"
+                ? "bg-mustard"
+                : "bg-olive-500",
+          )}
+          style={{ width: unlimited ? "20%" : `${ratio * 100}%` }}
+        />
+      </div>
+      <div className="mt-2 text-xs text-ink/50">{hint}</div>
+    </div>
+  );
+}
+
+/**
+ * Side-by-side checklist of what each plan unlocks. Free shows the
+ * caps (10/10) inline, Pro shows checkmarks for every feature gate
+ * defined in `PLAN_LIMITS`. Studio is folded into Pro for now.
+ */
+function PlanComparison({ plan }: { plan: "free" | "pro" | "studio" }) {
+  const isFree = plan === "free";
+  const lines: { label: string; free: string; pro: string }[] = [
+    {
+      label: "Solicitudes de presupuesto",
+      free: "Hasta 10/mes",
+      pro: "Ilimitadas",
+    },
+    {
+      label: "Reuniones agendadas",
+      free: "Hasta 10/mes",
+      pro: "Ilimitadas",
+    },
+    { label: "Editor + portfolio + presupuestador + agenda", free: "✓", pro: "✓" },
+    { label: "Subdominio demee.app/tuhandle", free: "✓", pro: "✓" },
+    { label: "Dominio personalizado (tuweb.com)", free: "—", pro: "✓" },
+    { label: "Sin marca «Hecho con Demee»", free: "—", pro: "✓" },
+    { label: "Múltiples tipos de reunión", free: "—", pro: "✓" },
+    { label: "Soporte prioritario", free: "—", pro: "✓" },
+  ];
+
+  return (
+    <div className="overflow-hidden rounded-md border border-ink/10">
+      <div className="grid grid-cols-[1fr_5rem_5rem] bg-ink/[0.03] px-4 py-2 text-xs font-medium uppercase tracking-wide text-ink/60">
+        <span>Funcionalidad</span>
+        <span className={cn("text-right", isFree && "text-ink")}>Free</span>
+        <span className={cn("text-right", !isFree && "text-ink")}>Pro</span>
+      </div>
+      <ul>
+        {lines.map((line) => (
+          <li
+            key={line.label}
+            className="grid grid-cols-[1fr_5rem_5rem] items-center border-t border-ink/5 px-4 py-2.5 text-sm"
+          >
+            <span className="text-ink/80">{line.label}</span>
+            <span
+              className={cn(
+                "text-right tabular-nums",
+                isFree ? "text-ink" : "text-ink/40",
+                line.free === "—" && "text-ink/30",
+              )}
+            >
+              {line.free}
+            </span>
+            <span
+              className={cn(
+                "text-right tabular-nums",
+                !isFree ? "text-ink" : "text-ink/60",
+              )}
+            >
+              {line.pro}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
