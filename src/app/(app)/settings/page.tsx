@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { FieldValue } from "firebase-admin/firestore";
 
+import { ManageSubscriptionButton } from "@/components/dashboard/ManageSubscriptionButton";
+import { UpgradeProButton } from "@/components/dashboard/UpgradeProButton";
+import { getAdminDb } from "@/lib/firebase/admin";
 import { getServerSession } from "@/lib/firebase/session";
 import { loadOwnProfile } from "@/lib/firebase/user-profile";
 import { getPlanLimits } from "@/lib/plans/config";
@@ -9,6 +13,7 @@ import {
   checkLeadQuota,
   loadUserPlan,
 } from "@/lib/plans/quotas";
+import { getStripe } from "@/lib/stripe/client";
 import { cn } from "@/lib/utils";
 
 export const runtime = "nodejs";
@@ -16,9 +21,31 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Ajustes" };
 
-export default async function SettingsPage() {
+interface Props {
+  /**
+   * Stripe redirect query:
+   *   ?session_id=cs_...   → just came back from a successful checkout
+   *   ?canceled=1          → just bailed from the checkout
+   */
+  searchParams: { session_id?: string; canceled?: string };
+}
+
+export default async function SettingsPage({ searchParams }: Props) {
   const session = await getServerSession();
   if (!session) redirect("/sign-in");
+
+  // Synchronously confirm a fresh upgrade before we load the rest of
+  // the panel state. The webhook is the authoritative path, but this
+  // makes the post-checkout page feel instant: by the time the user
+  // sees /settings, plan is already "pro" without waiting on Stripe's
+  // event delivery.
+  let upgradedNow = false;
+  if (searchParams.session_id) {
+    upgradedNow = await syncUpgradeFromCheckoutSession(
+      session.uid,
+      searchParams.session_id,
+    );
+  }
 
   const [loaded, plan, leadQuota, bookingQuota] = await Promise.all([
     loadOwnProfile(session.uid),
@@ -30,7 +57,6 @@ export default async function SettingsPage() {
   if (!loaded) redirect("/onboarding");
 
   const limits = getPlanLimits(plan);
-  const isFree = plan === "free";
 
   return (
     <div className="container max-w-3xl space-y-10 py-12">
@@ -38,6 +64,19 @@ export default async function SettingsPage() {
         <h1 className="font-display text-4xl text-ink">Ajustes</h1>
         <p className="text-sm text-ink/60">Cuenta, plan y preferencias.</p>
       </header>
+
+      {upgradedNow && plan === "pro" && (
+        <div className="rounded-lg border border-success/30 bg-success/5 p-4 text-sm text-success">
+          ¡Bienvenido a Pro! El pago se ha confirmado y ya tienes el plan
+          activado.
+        </div>
+      )}
+      {searchParams.canceled === "1" && (
+        <div className="rounded-lg border border-ink/15 bg-white p-4 text-sm text-ink/70">
+          Has cancelado el pago. Puedes pasar a Pro cuando quieras desde el
+          panel de plan.
+        </div>
+      )}
 
       <Panel title="Cuenta">
         <Row label="Email" value={loaded.email ?? "—"} />
@@ -84,22 +123,55 @@ export default async function SettingsPage() {
           </button>
         </div>
       </Panel>
-
-      {/*
-        Tiny hint — keeping the variable referenced silences the unused
-        warning we'd otherwise get from `isFree` above.
-      */}
-      <input type="hidden" data-plan={isFree ? "free" : "paid"} />
     </div>
   );
 }
 
 /**
- * Plan comparison panel. Shows the two product-relevant facts: usage
- * vs. cap on Free, and a per-feature checklist that maps to
- * `PLAN_LIMITS`. The upgrade button is disabled until Stripe is
- * wired — at that point only this CTA flips to a real checkout call.
+ * Retrieves the Stripe Checkout Session referenced in the success URL
+ * and, if it's actually paid + linked to this user, pins the user to
+ * Pro right away. Idempotent — receiving the same session id twice is
+ * a no-op merge. Failures are logged and swallowed: the webhook will
+ * still set the plan when it lands.
  */
+async function syncUpgradeFromCheckoutSession(
+  uid: string,
+  sessionId: string,
+): Promise<boolean> {
+  try {
+    const checkout = await getStripe().checkout.sessions.retrieve(sessionId);
+    if (checkout.client_reference_id !== uid) {
+      // Defensive: a malicious user could try to claim someone else's
+      // checkout by tampering with the redirect URL.
+      return false;
+    }
+    if (checkout.payment_status !== "paid") return false;
+
+    const customerId =
+      typeof checkout.customer === "string"
+        ? checkout.customer
+        : (checkout.customer?.id ?? null);
+    const subscriptionId =
+      typeof checkout.subscription === "string"
+        ? checkout.subscription
+        : (checkout.subscription?.id ?? null);
+
+    const data: Record<string, unknown> = {
+      plan: "pro",
+      stripeSubscriptionStatus: "active",
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (customerId) data.stripeCustomerId = customerId;
+    if (subscriptionId) data.stripeSubscriptionId = subscriptionId;
+
+    await getAdminDb().collection("users").doc(uid).set(data, { merge: true });
+    return true;
+  } catch (err) {
+    console.error("[settings] checkout sync failed", err);
+    return false;
+  }
+}
+
 function PlanPanel({
   plan,
   leadUsed,
@@ -125,19 +197,14 @@ function PlanPanel({
             Plan actual
           </div>
           <div className="font-display text-2xl text-ink">{planLabel}</div>
-          {plan === "pro" && (
+          {!isFree && (
             <div className="text-xs text-ink/60">7 €/mes · sin restricciones</div>
           )}
         </div>
-        {isFree && (
-          <button
-            type="button"
-            disabled
-            title="El checkout con Stripe se enchufa en una próxima entrega."
-            className="rounded-md bg-ink px-4 py-2 text-sm font-medium text-paper opacity-60"
-          >
-            Pasar a Pro · 7 €/mes (pronto)
-          </button>
+        {isFree ? (
+          <UpgradeProButton />
+        ) : (
+          <ManageSubscriptionButton />
         )}
       </div>
 
@@ -216,11 +283,6 @@ function UsageCard({
   );
 }
 
-/**
- * Side-by-side checklist of what each plan unlocks. Free shows the
- * caps (10/10) inline, Pro shows checkmarks for every feature gate
- * defined in `PLAN_LIMITS`. Studio is folded into Pro for now.
- */
 function PlanComparison({ plan }: { plan: "free" | "pro" | "studio" }) {
   const isFree = plan === "free";
   const lines: { label: string; free: string; pro: string }[] = [

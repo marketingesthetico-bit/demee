@@ -183,6 +183,8 @@ export async function POST(req: Request) {
         handle,
         plan: "free",
         stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        stripeSubscriptionStatus: null,
         createdAt: now,
         updatedAt: now,
       });
