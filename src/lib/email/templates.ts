@@ -132,3 +132,78 @@ export function buildGuestConfirmationEmail(args: GuestConfirmationArgs): {
   </div>`;
   return { subject, html };
 }
+
+interface MagicLinkArgs {
+  /** The Firebase-generated sign-in link. Embedded as the CTA href. */
+  link: string;
+}
+
+/**
+ * Magic link sign-in email. Replaces Firebase's stock template so the
+ * branding matches Demee. Hits the same accessibility floor as the rest
+ * of our transactional emails:
+ *
+ *   - inline styles only (no <style> tag, no external CSS)
+ *   - table-free single-column layout — wide enough to read on a phone,
+ *     centred on a desktop client
+ *   - <a> CTA also rendered as a plain-text URL further down so password
+ *     managers, screen readers and clients that strip buttons still work
+ *   - explicit "ignóralo si no fuiste tú" line for the security UX
+ *
+ * Note: we don't show the visitor's email here. Doing so would let an
+ * attacker who intercepted the email also harvest a confirmed address
+ * tied to a Demee account.
+ */
+export function buildMagicLinkEmail(args: MagicLinkArgs): {
+  subject: string;
+  html: string;
+} {
+  const subject = "Tu enlace para entrar en Demee";
+  const safeLink = esc(args.link);
+
+  const html = `
+  <div style="font-family:'Inter',system-ui,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:#2A2A28;background:#F7F4EC;">
+    <div style="text-align:center;margin:0 0 24px;">
+      <span style="display:inline-block;font-family:'Fraunces',Georgia,serif;font-size:28px;font-weight:600;color:#2A2A28;letter-spacing:-0.01em;">
+        demee<span style="color:#5B6B3C;">.</span>
+      </span>
+    </div>
+
+    <div style="background:#fff;border:1px solid #e5e5e5;border-radius:14px;padding:32px 28px;">
+      <h1 style="font-family:'Fraunces',Georgia,serif;font-size:26px;line-height:1.2;margin:0 0 12px;color:#2A2A28;">
+        Entra en Demee
+      </h1>
+      <p style="margin:0 0 24px;color:#5b5b58;font-size:15px;line-height:1.6;">
+        Pulsa el botón de abajo para iniciar sesión en tu cuenta. El enlace
+        caduca en 1&nbsp;hora y solo se puede usar una vez.
+      </p>
+
+      <div style="text-align:center;margin:0 0 28px;">
+        <a href="${safeLink}"
+           style="display:inline-block;background:#2A2A28;color:#F7F4EC;text-decoration:none;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:500;letter-spacing:0.01em;">
+          Entrar en Demee
+        </a>
+      </div>
+
+      <p style="margin:0 0 8px;color:#737373;font-size:12px;line-height:1.6;">
+        ¿El botón no funciona? Copia y pega este enlace en tu navegador:
+      </p>
+      <p style="margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.5;color:#5B6B3C;word-break:break-all;">
+        <a href="${safeLink}" style="color:#5B6B3C;text-decoration:underline;">${safeLink}</a>
+      </p>
+
+      <div style="height:1px;background:#eee;margin:28px 0 20px;"></div>
+
+      <p style="margin:0;color:#a3a39e;font-size:12px;line-height:1.6;">
+        ¿No has pedido este email? Ignóralo — sin pulsar el enlace nadie
+        puede entrar en tu cuenta.
+      </p>
+    </div>
+
+    <p style="font-size:12px;color:#a3a39e;text-align:center;margin:20px 0 0;line-height:1.6;">
+      Demee · portfolio, presupuestos y agenda en una sola URL
+    </p>
+  </div>`;
+
+  return { subject, html };
+}

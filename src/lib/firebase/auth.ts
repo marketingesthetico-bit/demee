@@ -1,7 +1,6 @@
 import {
   GoogleAuthProvider,
   isSignInWithEmailLink,
-  sendSignInLinkToEmail,
   signInWithEmailLink,
   signInWithPopup,
   signOut,
@@ -18,12 +17,28 @@ export async function signInWithGoogle(): Promise<UserCredential> {
   return signInWithPopup(getFirebaseAuth(), provider);
 }
 
+/**
+ * Trigger a magic-link email through our own backend instead of
+ * Firebase's stock email sender. The server route generates the
+ * actual sign-in link via the Admin SDK and ships it through Resend
+ * with our branded template. The link is still a regular Firebase
+ * magic link, so `signInWithEmailLink` on the client consumes it
+ * exactly the same way it would have.
+ */
 export async function sendMagicLink(email: string): Promise<void> {
   const origin = window.location.origin;
-  await sendSignInLinkToEmail(getFirebaseAuth(), email, {
-    url: `${origin}/callback`,
-    handleCodeInApp: true,
+  const continueUrl = `${origin}/callback`;
+  const res = await fetch("/api/auth/magic-link", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, continueUrl }),
   });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(`magic-link failed: ${body.error ?? res.statusText}`);
+  }
+  // Stash the email so completeMagicLinkSignIn can recover it once
+  // the visitor returns from clicking the link in their inbox.
   window.localStorage.setItem(EMAIL_FOR_SIGN_IN_KEY, email);
 }
 
