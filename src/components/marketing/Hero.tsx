@@ -213,10 +213,10 @@ function BrowserMockup() {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <PortfolioTile label="Marca · Estudio Vana" tone="olive" />
-          <PortfolioTile label="Web · Casa Atemporal" tone="mustard" />
-          <PortfolioTile label="Identidad · Forma" tone="ink" />
-          <PortfolioTile label="Branding · Halo" tone="olive-soft" />
+          <PortfolioTile label="Marca · Estudio Vana" kind="brand" />
+          <PortfolioTile label="Web · Casa Atemporal" kind="web" />
+          <PortfolioTile label="Identidad · Forma" kind="identity" />
+          <PortfolioTile label="Branding · Halo" kind="halo" />
         </div>
 
         <div className="flex items-center justify-between gap-3 rounded-md border border-olive-200 bg-olive-50 px-4 py-3">
@@ -235,27 +235,221 @@ function BrowserMockup() {
   );
 }
 
+/**
+ * Each tile is a tiny "fake project" — a visual that reads as the
+ * kind of work a brand designer would put in their portfolio. SVG
+ * inline so the hero stays a single HTTP request and there's no
+ * external image dependency to ship rights for.
+ *
+ * The four kinds map to the labels in the mockup:
+ *   - brand    → wellness studio mark on sage gradient
+ *   - web      → mock browser layout with hero + columns
+ *   - identity → big serif monogram on neutral
+ *   - halo     → ringed mark + colour swatches
+ */
 function PortfolioTile({
   label,
-  tone,
+  kind,
 }: {
   label: string;
-  tone: "olive" | "mustard" | "ink" | "olive-soft";
+  kind: "brand" | "web" | "identity" | "halo";
 }) {
-  const bg =
-    tone === "olive"
-      ? "bg-olive-100"
-      : tone === "mustard"
-        ? "bg-mustard-50"
-        : tone === "ink"
-          ? "bg-ink/[0.06]"
-          : "bg-olive-50";
+  const Visual = TILE_VISUALS[kind];
   return (
-    <div className={`aspect-[5/4] rounded-md ${bg} p-2`}>
-      <div className="flex h-full items-end">
-        <div className="text-[9px] font-medium text-ink/60">{label}</div>
+    <div className="relative aspect-[5/4] overflow-hidden rounded-md">
+      <Visual />
+      {/* Soft top→bottom darken so the label stays readable over any
+          composition. Pointer-events-none so it doesn't catch hover. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/35 to-transparent"
+      />
+      <div className="absolute inset-x-2 bottom-1.5 text-[9px] font-medium tracking-wide text-white/95 [text-shadow:0_1px_2px_rgba(0,0,0,0.3)]">
+        {label}
       </div>
     </div>
+  );
+}
+
+const TILE_VISUALS = {
+  brand: BrandTile,
+  web: WebTile,
+  identity: IdentityTile,
+  halo: HaloTile,
+} as const;
+
+/* ---------- Tile 1 — wellness studio brand ---------- */
+function BrandTile() {
+  return (
+    <svg
+      viewBox="0 0 100 80"
+      preserveAspectRatio="xMidYMid slice"
+      className="h-full w-full"
+      role="img"
+      aria-label="Brand work for Estudio Vana"
+    >
+      <defs>
+        <linearGradient id="vana-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#DCE5C8" />
+          <stop offset="100%" stopColor="#B6C29A" />
+        </linearGradient>
+      </defs>
+      <rect width="100" height="80" fill="url(#vana-bg)" />
+      {/* Concentric organic mark suggesting petals / breathing */}
+      <circle cx="50" cy="38" r="20" fill="none" stroke="#3A4527" strokeWidth="0.6" opacity="0.55" />
+      <circle cx="50" cy="38" r="14" fill="none" stroke="#3A4527" strokeWidth="0.6" opacity="0.7" />
+      <circle cx="50" cy="38" r="8" fill="#3A4527" opacity="0.85" />
+      {/* Tiny wordmark below the mark */}
+      <text
+        x="50"
+        y="64"
+        textAnchor="middle"
+        fontFamily="Fraunces, Georgia, serif"
+        fontSize="6"
+        fontWeight="600"
+        letterSpacing="2"
+        fill="#3A4527"
+      >
+        VANA
+      </text>
+    </svg>
+  );
+}
+
+/* ---------- Tile 2 — web layout for Casa Atemporal ---------- */
+function WebTile() {
+  return (
+    <svg
+      viewBox="0 0 100 80"
+      preserveAspectRatio="xMidYMid slice"
+      className="h-full w-full"
+      role="img"
+      aria-label="Web design for Casa Atemporal"
+    >
+      <defs>
+        <linearGradient id="casa-bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#FBF4E0" />
+          <stop offset="100%" stopColor="#E5BC49" stopOpacity="0.7" />
+        </linearGradient>
+      </defs>
+      <rect width="100" height="80" fill="url(#casa-bg)" />
+      {/* Mock browser hero */}
+      <rect x="10" y="10" width="80" height="32" rx="2" fill="#FFFFFF" opacity="0.85" />
+      <rect x="14" y="14" width="22" height="3" rx="0.5" fill="#2A2A28" opacity="0.85" />
+      <rect x="14" y="20" width="40" height="2" rx="0.5" fill="#2A2A28" opacity="0.4" />
+      <rect x="14" y="24" width="34" height="2" rx="0.5" fill="#2A2A28" opacity="0.4" />
+      <rect x="60" y="14" width="26" height="24" rx="1.5" fill="#B3841F" opacity="0.7" />
+      {/* Columns under the hero */}
+      <rect x="10" y="46" width="22" height="22" rx="1.5" fill="#FFFFFF" opacity="0.7" />
+      <rect x="36" y="46" width="22" height="22" rx="1.5" fill="#FFFFFF" opacity="0.7" />
+      <rect x="62" y="46" width="22" height="22" rx="1.5" fill="#FFFFFF" opacity="0.7" />
+      {/* Tiny detail bars inside the columns */}
+      <rect x="13" y="60" width="14" height="1.4" fill="#2A2A28" opacity="0.5" />
+      <rect x="39" y="60" width="14" height="1.4" fill="#2A2A28" opacity="0.5" />
+      <rect x="65" y="60" width="14" height="1.4" fill="#2A2A28" opacity="0.5" />
+    </svg>
+  );
+}
+
+/* ---------- Tile 3 — identity / monogram for "Forma" ---------- */
+function IdentityTile() {
+  return (
+    <svg
+      viewBox="0 0 100 80"
+      preserveAspectRatio="xMidYMid slice"
+      className="h-full w-full"
+      role="img"
+      aria-label="Identity design — Forma monogram"
+    >
+      <rect width="100" height="80" fill="#1F2514" />
+      {/* Subtle warm vignette at the top */}
+      <defs>
+        <radialGradient id="forma-glow" cx="0.5" cy="0.2" r="0.6">
+          <stop offset="0%" stopColor="#D4A02F" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#1F2514" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="100" height="80" fill="url(#forma-glow)" />
+      {/* Big serif F as monogram, with a tight rule */}
+      <text
+        x="50"
+        y="56"
+        textAnchor="middle"
+        fontFamily="Fraunces, Georgia, serif"
+        fontSize="56"
+        fontWeight="700"
+        fill="#F7F4EC"
+      >
+        f
+      </text>
+      <line
+        x1="22"
+        y1="68"
+        x2="78"
+        y2="68"
+        stroke="#D4A02F"
+        strokeWidth="0.6"
+      />
+      <text
+        x="50"
+        y="74"
+        textAnchor="middle"
+        fontFamily="Inter, system-ui, sans-serif"
+        fontSize="3.6"
+        letterSpacing="2.5"
+        fill="#F7F4EC"
+        opacity="0.7"
+      >
+        FORMA · 2024
+      </text>
+    </svg>
+  );
+}
+
+/* ---------- Tile 4 — Halo: ringed mark + swatches ---------- */
+function HaloTile() {
+  return (
+    <svg
+      viewBox="0 0 100 80"
+      preserveAspectRatio="xMidYMid slice"
+      className="h-full w-full"
+      role="img"
+      aria-label="Branding — Halo system"
+    >
+      <defs>
+        <linearGradient id="halo-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#F3F5EC" />
+          <stop offset="100%" stopColor="#E0E6CB" />
+        </linearGradient>
+      </defs>
+      <rect width="100" height="80" fill="url(#halo-bg)" />
+      {/* Ringed monogram on the left */}
+      <circle cx="34" cy="36" r="18" fill="none" stroke="#3A4527" strokeWidth="0.7" />
+      <circle cx="34" cy="36" r="12" fill="#3A4527" />
+      <text
+        x="34"
+        y="40"
+        textAnchor="middle"
+        fontFamily="Fraunces, Georgia, serif"
+        fontSize="11"
+        fontWeight="600"
+        fill="#F3F5EC"
+      >
+        H
+      </text>
+      {/* Tiny "halo" dots circling the mark */}
+      {[0, 60, 120, 180, 240, 300].map((deg, i) => {
+        const r = 22;
+        const rad = (deg * Math.PI) / 180;
+        const cx = 34 + r * Math.cos(rad);
+        const cy = 36 + r * Math.sin(rad);
+        return <circle key={i} cx={cx} cy={cy} r="1.1" fill="#D4A02F" />;
+      })}
+      {/* Colour swatches stack on the right */}
+      <rect x="62" y="18" width="24" height="11" rx="1.5" fill="#3A4527" />
+      <rect x="62" y="32" width="24" height="11" rx="1.5" fill="#D4A02F" />
+      <rect x="62" y="46" width="24" height="11" rx="1.5" fill="#F7F4EC" stroke="#3A4527" strokeWidth="0.4" />
+    </svg>
   );
 }
 
